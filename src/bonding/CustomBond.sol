@@ -36,6 +36,7 @@ contract CustomBond is Ownable {
     Terms public terms; // stores terms for new bonds
     Adjust public adjustment; // stores adjustment to BCV data
     FeeTiers[] private feeTiers; // stores fee tiers
+    bool public lpTokenAsFeeFlag;
 
     mapping( address => Bond ) public bondInfo; // stores bond information for depositors
     
@@ -103,6 +104,8 @@ contract CustomBond is Ownable {
                 fees: _fees[i]
             }));
         }
+        
+        lpTokenAsFeeFlag = true;
     }
 
     /* ======== INITIALIZATION ======== */
@@ -136,6 +139,19 @@ contract CustomBond is Ownable {
         lastDecay = block.number;
     }
     
+
+     /**
+     *  @notice set control variable adjustment
+     *  @param _addition bool
+     *  @param _increment uint
+     *  @param _target uint
+     *  @param _buffer uint
+     */
+    function setLPtokenAsFee( 
+        bool _lpTokenAsFeeFlag 
+    ) external onlyPolicy() {
+        lpTokenAsFeeFlag = _lpTokenAsFeeFlag;
+    }
     
     /* ======== POLICY FUNCTIONS ======== */
 
@@ -227,8 +243,19 @@ contract CustomBond is Ownable {
         require(payout <= maxPayout(), "Bond too large"); // size protection because there is no slippage
 
         // profits are calculated
-        uint fee = payout.mul(currentOlympusFee()).div(1e6);
-
+        uint fee;
+        /**
+            principal is been taken as fee
+            and trasfered to dao
+         */
+        if(lpTokenAsFeeFlag){
+            fee = _amount.mul(currentOlympusFee()).div(1e6);
+            if(fee != 0){
+                PRINCIPAL_TOKEN.transfer(OLY_TREASURY, fee);
+            }
+        }else{
+            fee = payout.mul(currentOlympusFee()).div(1e6);
+        }
         /**
             principal is transferred in
             approved and
@@ -238,7 +265,7 @@ contract CustomBond is Ownable {
         PRINCIPAL_TOKEN.approve(address(CUSTOM_TREASURY), _amount);
         CUSTOM_TREASURY.deposit(address(PRINCIPAL_TOKEN), _amount, payout);
         
-        if (fee != 0) { // fee is transferred to dao 
+        if (!lpTokenAsFeeFlag && fee != 0) { // fee is transferred to dao 
             PAYOUT_TOKEN.transfer(OLY_TREASURY, fee);
         }
         
