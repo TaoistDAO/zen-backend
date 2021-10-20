@@ -2,12 +2,11 @@
 
 pragma solidity 0.7.5;
 
-import "../types/Ownable.sol";
 import "../libraries/SafeMath.sol";
 import "../libraries/SafeERC20.sol";
 import "../interfaces/IERC20.sol";
 
-contract CustomTreasury is Ownable {
+contract CustomTreasury {
     
     using SafeERC20 for IERC20;
     using SafeMath for uint;
@@ -20,11 +19,9 @@ contract CustomTreasury is Ownable {
 
     event Withdraw(address token, address destination, uint amount);
     
-    constructor(address _payoutToken, address _initialOwner) {
+    constructor(address _payoutToken) {
         require(_payoutToken != address(0), "CustomTreasury: payoutToken must not be zero address");
         PAYOUT_TOKEN = _payoutToken;
-        require(_initialOwner != address(0), "CustomTreasury: initialOwner must not be zero address");
-        policy = _initialOwner;
     }
 
     /* ======== BOND CONTRACT FUNCTION ======== */
@@ -63,7 +60,7 @@ contract CustomTreasury is Ownable {
      *  @param _destination address
      *  @param _amount uint
      */
-    function withdraw(address _token, address _destination, uint _amount) external onlyPolicy() {
+    function withdraw(address _token, address _destination, uint _amount) external {
         IERC20(_token).safeTransfer(_destination, _amount);
 
         emit Withdraw(_token, _destination, _amount);
@@ -73,7 +70,7 @@ contract CustomTreasury is Ownable {
         @notice toggle bond contract
         @param _bondContract address
      */
-    function toggleBondContract(address _bondContract) external onlyPolicy() {
+    function toggleBondContract(address _bondContract) external {
         bondContract[_bondContract] = !bondContract[_bondContract];
 
         emit BondContractToggled(_bondContract, bondContract[_bondContract]);

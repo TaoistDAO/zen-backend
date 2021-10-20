@@ -2,14 +2,13 @@
 
 pragma solidity 0.7.5;
 
-import "../types/Ownable.sol";
 import "../libraries/SafeMath.sol";
 import "../libraries/SafeERC20.sol";
 import "../libraries/FixedPoint.sol";
 import "../interfaces/ITreasury.sol";
 import "../interfaces/IERC20.sol";
 
-contract CustomBond is Ownable {
+contract CustomBond {
     using FixedPoint for *;
     using SafeERC20 for IERC20;
     using SafeMath for uint;
@@ -76,24 +75,21 @@ contract CustomBond is Ownable {
         address _principalToken, 
         address _olyTreasury,
         address _subsidyRouter, 
-        address _initialOwner, 
         address _dao,
         uint[] memory _tierCeilings, 
         uint[] memory _fees
     ) {
-        require(_customTreasury != address(0), "ProFactory: customTreasury must not be zero address");
+        require(_customTreasury != address(0), "Factory: customTreasury must not be zero address");
         CUSTOM_TREASURY = ITreasury(_customTreasury);
-        require(_payoutToken != address(0), "ProFactory: payoutToken must not be zero address");
+        require(_payoutToken != address(0), "Factory: payoutToken must not be zero address");
         PAYOUT_TOKEN = IERC20(_payoutToken);
-        require(_principalToken != address(0), "ProFactory: principalToken must not be zero address");
+        require(_principalToken != address(0), "Factory: principalToken must not be zero address");
         PRINCIPAL_TOKEN = IERC20(_principalToken);
-        require(_olyTreasury != address(0), "ProFactory: olyTreasury must not be zero address");
+        require(_olyTreasury != address(0), "Factory: olyTreasury must not be zero address");
         OLY_TREASURY = _olyTreasury;
-        require(_subsidyRouter != address(0), "ProFactory: subsidyRouter must not be zero address");
+        require(_subsidyRouter != address(0), "Factory: subsidyRouter must not be zero address");
         SUBSIDY_ROUTER = _subsidyRouter;
-        require(_initialOwner != address(0), "ProFactory: initialOwner must not be zero address");
-        policy = _initialOwner;
-        require(_dao != address(0), "ProFactory: DAO must not be zero address");
+        require(_dao != address(0), "Factory: DAO must not be zero address");
         DAO = _dao;
         require(_tierCeilings.length == _fees.length, "tier length and fee length not the same");
 
@@ -123,7 +119,7 @@ contract CustomBond is Ownable {
         uint _maxPayout,
         uint _maxDebt,
         uint _initialDebt
-    ) external onlyPolicy() {
+    ) external {
         require(currentDebt() == 0, "Debt must be 0 for initialization");
         terms = Terms ({
             controlVariable: _controlVariable,
@@ -145,7 +141,7 @@ contract CustomBond is Ownable {
      *  @param _parameter PARAMETER
      *  @param _input uint
      */
-    function setBondTerms(PARAMETER _parameter, uint _input) external onlyPolicy() {
+    function setBondTerms(PARAMETER _parameter, uint _input) external {
         if (_parameter == PARAMETER.VESTING) { // 0
             require( _input >= 10000, "Vesting must be longer than 36 hours" );
             terms.vestingTerm = _input;
@@ -169,7 +165,7 @@ contract CustomBond is Ownable {
         uint _increment, 
         uint _target,
         uint _buffer 
-    ) external onlyPolicy() {
+    ) external {
         require(_increment <= terms.controlVariable.mul(30).div(1000), "Increment too large" );
 
         adjustment = Adjust({

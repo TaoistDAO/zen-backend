@@ -3,12 +3,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
-import "../types/Ownable.sol";
 import "./CustomBond.sol";
 import "./CustomTreasury.sol";
 import "../interfaces/IFactoryStorage.sol";
 
-contract Factory is Ownable {
+contract Factory {
     
     address immutable public TREASURY;
     address immutable public FACTORY_STORAGE;
@@ -37,25 +36,22 @@ contract Factory is Ownable {
         @notice deploys custom treasury and custom bond contracts and returns address of both
         @param _payoutToken address
         @param _principleToken address
-        @param _initialOwner address
         @return _treasury address
         @return _bond address
      */
     function createBondAndTreasury(
         address _payoutToken, 
         address _principleToken, 
-        address _initialOwner, 
         uint[] calldata _tierCeilings, 
         uint[] calldata _fees
-    ) external onlyPolicy() returns(address _treasury, address _bond) {    
-        CustomTreasury customTreasury = new CustomTreasury(_payoutToken, _initialOwner);
+    ) external returns(address _treasury, address _bond) {    
+        CustomTreasury customTreasury = new CustomTreasury(_payoutToken);
         CustomBond customBond = new CustomBond(
             address(customTreasury), 
             _payoutToken, 
             _principleToken, 
             TREASURY, 
             SUBSIDY_ROUTER, 
-            _initialOwner, 
             DAO, 
             _tierCeilings, 
             _fees
@@ -66,7 +62,6 @@ contract Factory is Ownable {
             _principleToken, 
             address(customTreasury), 
             address(customBond), 
-            _initialOwner, 
             _tierCeilings, 
             _fees
         );
@@ -77,7 +72,6 @@ contract Factory is Ownable {
         @param _payoutToken address
         @param _principleToken address
         @param _customTreasury address
-        @param _initialOwner address
         @return _treasury address
         @return _bond address
      */
@@ -85,17 +79,15 @@ contract Factory is Ownable {
         address _payoutToken, 
         address _principleToken, 
         address _customTreasury, 
-        address _initialOwner, 
         uint[] calldata _tierCeilings, 
         uint[] calldata _fees 
-    ) external onlyPolicy() returns(address _treasury, address _bond) {
+    ) external returns(address _treasury, address _bond) {
         CustomBond bond = new CustomBond(
             _customTreasury, 
             _payoutToken, 
             _principleToken, 
             _customTreasury, 
             SUBSIDY_ROUTER, 
-            _initialOwner, 
             DAO, 
             _tierCeilings, 
             _fees
@@ -106,7 +98,6 @@ contract Factory is Ownable {
             _principleToken,
             _customTreasury, 
             address(bond), 
-            _initialOwner, 
             _tierCeilings, 
             _fees
         );
