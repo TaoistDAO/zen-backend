@@ -46,7 +46,7 @@
     "solidity-coverage": "^0.7.17",
     "ts-generator": "^0.1.1",
     "ts-node": "^10.2.1",
-    "typechain": "^5.1.2",
+    "typechain": "^5.0.0",
     "typescript": "^4.4.3"
   },
   "scripts": {
@@ -70,6 +70,15 @@
     "fork:deploy": "node ./_scripts.js fork:deploy",
     "fork:dev": "node ./_scripts.js fork:dev",
     "fork:node": "node ./_scripts.js fork:node",
-    "fork:test": "node ./_scripts.js fork:test"
+    "fork:test": "node ./_scripts.js fork:test",
+    "clean": "rimraf **/artifacts **/cache **/typechain",
+    "fork:kovan": "hardhat node --fork https://eth-kovan.alchemyapi.io/v2/-BPEIJTGZJkx7WbtkL89BYsF-_t3Scwg",
+    "fork:mainnet": "hardhat node --fork https://eth-mainnet.alchemyapi.io/v2/-BPEIJTGZJkx7WbtkL89BYsF-_t3Scwg --fork-block-number 12540501",
+    "deploy:kovan": "hardhat deploy --network kovan",
+    "export:kovan": "hardhat export --network kovan --export deployments/kovan.json",
+    "verify:kovan": "hardhat etherscan-verify --network kovan",
+    "deploy:mainnet": "hardhat deploy --network mainnet",
+    "export:mainnet": "hardhat export --network mainnet --export deployments/mainnet.json",
+    "verify:mainnet": "hardhat etherscan-verify --network mainnet"
   }
 }

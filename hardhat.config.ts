@@ -5,44 +5,51 @@ import '@nomiclabs/hardhat-ethers';
 import 'hardhat-gas-reporter';
 import '@typechain/hardhat';
 import 'solidity-coverage';
-import {node_url, accounts} from './utils/network';
+// import {node_url, accounts} from './utils/network';
 
 // While waiting for hardhat PR: https://github.com/nomiclabs/hardhat/pull/1542
 if (process.env.HARDHAT_FORK) {
   process.env['HARDHAT_DEPLOY_FORK'] = process.env.HARDHAT_FORK;
 }
+const mnemonic = process.env.MNEMONIC;
+function node(networkName: string) {
+  const fallback = 'http://localhost:8545';
+  const uppercase = networkName.toUpperCase();
+  const uri = process.env[`ETHEREUM_NODE_${uppercase}`] || process.env.ETHEREUM_NODE || fallback;
+  return uri.replace('{{NETWORK}}', networkName);
+}
+function accounts(networkName: string) {
+  const uppercase = networkName.toUpperCase();
+  const accounts = process.env[`ETHEREUM_ACCOUNTS_${uppercase}`] || process.env.ETHEREUM_ACCOUNTS || '';
+  return accounts
+    .split(',')
+    .map((account) => account.trim())
+    .filter(Boolean);
+}
 
-const config: HardhatUserConfig = {
-  solidity: {
-    compilers: [
-      {
-        version: '0.7.5',
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 2000,
-          },
-        },
-      },
-    ],
-  },
-  namedAccounts: {
-    deployer: 0,
-    simpleERC20Beneficiary: 1,
-  },
+const config: HardhatUserConfig = {  
+  defaultNetwork: 'hardhat',
   networks: {
     hardhat: {
       initialBaseFeePerGas: 0, // to fix : https://github.com/sc-forks/solidity-coverage/issues/652, see https://github.com/sc-forks/solidity-coverage/issues/652#issuecomment-896330136
       // process.env.HARDHAT_FORK will specify the network that the fork is made from.
       // this line ensure the use of the corresponding accounts
-      accounts: accounts(process.env.HARDHAT_FORK),
-      forking: process.env.HARDHAT_FORK
-        ? {
-            // TODO once PR merged : network: process.env.HARDHAT_FORK,
-            url: node_url(process.env.HARDHAT_FORK),
-            blockNumber: process.env.HARDHAT_FORK_NUMBER ? parseInt(process.env.HARDHAT_FORK_NUMBER) : undefined,
-          }
-        : undefined,
+      accounts: { mnemonic},
+      // forking: {
+      //   blockNumber: 12540501,
+      //   url: node('mainnet'), // May 31, 2021
+      // },
+      chainId: 42, //42
+      forking: {
+        blockNumber: 27277405,
+        url: node('kovan'),
+      },
+      // forking: process.env.MAINNET
+      //   ? {
+      //       url: node_url(process.env.MAINNET),
+      //       blockNumber: process.env.HARDHAT_FORK_NUMBER ? parseInt(process.env.HARDHAT_FORK_NUMBER) : undefined,
+      //     }
+      //   : undefined,
       mining: process.env.MINING_INTERVAL
         ? {
             auto: false,
@@ -50,35 +57,39 @@ const config: HardhatUserConfig = {
           }
         : undefined,
     },
-    localhost: {
-      url: node_url('localhost'),
-      accounts: accounts(),
-    },
-    staging: {
-      url: node_url('rinkeby'),
-      accounts: accounts('rinkeby'),
-    },
-    production: {
-      url: node_url('mainnet'),
-      accounts: accounts('mainnet'),
-    },
+    // localhost: {
+    //   url: node_url('localhost'),
+    //   accounts: accounts(),
+    // },
+    // staging: {
+    //   url: node_url('rinkeby'),
+    //   accounts: accounts('rinkeby'),
+    // },
+    // production: {
+    //   url: node_url('mainnet'),
+    //   accounts: accounts('mainnet'),
+    // },
     mainnet: {
-      url: node_url('mainnet'),
+      url: node('mainnet'),
       accounts: accounts('mainnet'),
     },
     rinkeby: {
-      url: node_url('rinkeby'),
+      url: node('rinkeby'),
       accounts: accounts('rinkeby'),
     },
     kovan: {
-      url: node_url('kovan'),
+      url: node('kovan'),
       accounts: accounts('kovan'),
     },
-    goerli: {
-      url: node_url('goerli'),
-      accounts: accounts('goerli'),
+    arbitrum: {
+      url: 'https://rinkeby.arbitrum.io/rpc',
+      gasPrice: 0,
     },
   },
+  namedAccounts: {
+    deployer: 0,
+    owner: 1
+  },  
   paths: {
     sources: 'src',
   },
@@ -95,17 +106,30 @@ const config: HardhatUserConfig = {
   },
   mocha: {
     timeout: 0,
-  },
-  external: process.env.HARDHAT_FORK
-    ? {
-        deployments: {
-          // process.env.HARDHAT_FORK will specify the network that the fork is made from.
-          // these lines allow it to fetch the deployments from the network being forked from both for node and deploy task
-          hardhat: ['deployments/' + process.env.HARDHAT_FORK],
-          localhost: ['deployments/' + process.env.HARDHAT_FORK],
+  },  
+  solidity: {
+    compilers: [
+      {
+        version: '0.7.5',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 2000,
+          },
         },
-      }
-    : undefined,
+      },
+    ],
+  },
+  // external: process.env.HARDHAT_FORK
+  //   ? {
+  //       deployments: {
+  //         // process.env.HARDHAT_FORK will specify the network that the fork is made from.
+  //         // these lines allow it to fetch the deployments from the network being forked from both for node and deploy task
+  //         hardhat: ['deployments/' + process.env.HARDHAT_FORK],
+  //         localhost: ['deployments/' + process.env.HARDHAT_FORK],
+  //       },
+  //     }
+  //   : undefined,
 };
 
 export default config;

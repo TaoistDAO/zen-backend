@@ -3,11 +3,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
+import "../types/Ownable.sol";
 import "./CustomBond.sol";
 import "./CustomTreasury.sol";
 import "../interfaces/IFactoryStorage.sol";
 
-contract Factory {
+contract Factory is Ownable {
     
     address immutable public TREASURY;
     address immutable public FACTORY_STORAGE;
@@ -36,22 +37,25 @@ contract Factory {
         @notice deploys custom treasury and custom bond contracts and returns address of both
         @param _payoutToken address
         @param _principleToken address
+        @param _initialOwner address
         @return _treasury address
         @return _bond address
      */
     function createBondAndTreasury(
         address _payoutToken, 
         address _principleToken, 
+        address _initialOwner, 
         uint[] calldata _tierCeilings, 
         uint[] calldata _fees
     ) external returns(address _treasury, address _bond) {    
-        CustomTreasury customTreasury = new CustomTreasury(_payoutToken);
+        CustomTreasury customTreasury = new CustomTreasury(_payoutToken, _initialOwner);
         CustomBond customBond = new CustomBond(
             address(customTreasury), 
             _payoutToken, 
             _principleToken, 
             TREASURY, 
             SUBSIDY_ROUTER, 
+            _initialOwner, 
             DAO, 
             _tierCeilings, 
             _fees
@@ -62,6 +66,7 @@ contract Factory {
             _principleToken, 
             address(customTreasury), 
             address(customBond), 
+            _initialOwner, 
             _tierCeilings, 
             _fees
         );
@@ -72,6 +77,7 @@ contract Factory {
         @param _payoutToken address
         @param _principleToken address
         @param _customTreasury address
+        @param _initialOwner address
         @return _treasury address
         @return _bond address
      */
@@ -79,6 +85,7 @@ contract Factory {
         address _payoutToken, 
         address _principleToken, 
         address _customTreasury, 
+        address _initialOwner, 
         uint[] calldata _tierCeilings, 
         uint[] calldata _fees 
     ) external returns(address _treasury, address _bond) {
@@ -88,6 +95,7 @@ contract Factory {
             _principleToken, 
             _customTreasury, 
             SUBSIDY_ROUTER, 
+            _initialOwner, 
             DAO, 
             _tierCeilings, 
             _fees
@@ -98,6 +106,7 @@ contract Factory {
             _principleToken,
             _customTreasury, 
             address(bond), 
+            _initialOwner, 
             _tierCeilings, 
             _fees
         );

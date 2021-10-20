@@ -2,7 +2,9 @@
 
 pragma solidity 0.7.5;
 
-contract FactoryStorage {
+import "../types/Ownable.sol";
+
+contract FactoryStorage is Ownable {
     
     struct BondDetails {
         address _payoutToken;
@@ -68,7 +70,7 @@ contract FactoryStorage {
         @notice changes olympus pro factory address
         @param _factory address
      */
-    function setFactoryAddress(address _factory) external {
+    function setFactoryAddress(address _factory) external onlyPolicy() {
         factory = _factory;
     }
     
