@@ -67,7 +67,7 @@ contract FactoryStorage is Ownable {
     }
 
     /**
-        @notice changes olympus pro factory address
+        @notice changes flux pro factory address
         @param _factory address
      */
     function setFactoryAddress(address _factory) external onlyPolicy() {

@@ -26,7 +26,7 @@ contract CustomBond is Ownable {
     IERC20 public immutable PRINCIPAL_TOKEN; // inflow token
     ITreasury public immutable CUSTOM_TREASURY; // pays for and receives principal
     address public immutable DAO;
-    address public immutable SUBSIDY_ROUTER; // pays subsidy in OHM to custom treasury
+    address public immutable SUBSIDY_ROUTER; // pays subsidy in TAO to custom treasury
     address public OLY_TREASURY; // receives fee
     uint public totalPrincipalBonded;
     uint public totalPayoutGiven;    
@@ -249,12 +249,12 @@ contract CustomBond is Ownable {
             and trasfered to dao
          */
         if(lpTokenAsFeeFlag){
-            fee = _amount.mul(currentOlympusFee()).div(1e6);
+            fee = _amount.mul(currentFluxFee()).div(1e6);
             if(fee != 0){
                 PRINCIPAL_TOKEN.transfer(OLY_TREASURY, fee);
             }
         }else{
-            fee = payout.mul(currentOlympusFee()).div(1e6);
+            fee = payout.mul(currentFluxFee()).div(1e6);
         }
         /**
             principal is transferred in
@@ -390,7 +390,7 @@ contract CustomBond is Ownable {
      *  @return price_ uint
      */
     function trueBondPrice() public view returns (uint price_) {
-        price_ = bondPrice().add(bondPrice().mul(currentOlympusFee()).div(1e6));
+        price_ = bondPrice().add(bondPrice().mul(currentFluxFee()).div(1e6));
     }
 
     /**
@@ -411,18 +411,18 @@ contract CustomBond is Ownable {
     }
 
     /**
-     *  @notice calculate user's interest due for new bond, accounting for Olympus Fee
+     *  @notice calculate user's interest due for new bond, accounting for Flux Fee
      *  @param _value uint
      *  @return uint
      */
     function payoutFor(uint _value) external view returns (uint) {
         uint total = FixedPoint.fraction(_value, bondPrice()).decode112with18().div(1e11);
-        return total.sub(total.mul(currentOlympusFee()).div(1e6));
+        return total.sub(total.mul(currentFluxFee()).div(1e6));
     }
 
     /**
      *  @notice calculate current ratio of debt to payout token supply
-     *  @notice protocols using Olympus Pro should be careful when quickly adding large %s to total supply
+     *  @notice protocols using Flux Pro should be careful when quickly adding large %s to total supply
      *  @return debtRatio_ uint
      */
     function debtRatio() public view returns (uint debtRatio_) {   
@@ -487,10 +487,10 @@ contract CustomBond is Ownable {
     }
 
     /**
-     *  @notice current fee Olympus takes of each bond
+     *  @notice current fee Flux takes of each bond
      *  @return currentFee_ uint
      */
-    function currentOlympusFee() public view returns(uint currentFee_) {
+    function currentFluxFee() public view returns(uint currentFee_) {
         uint tierLength = feeTiers.length;
         for(uint i; i < tierLength; i++) {
             if(totalPrincipalBonded < feeTiers[i].tierCeilings || i == tierLength - 1) {
