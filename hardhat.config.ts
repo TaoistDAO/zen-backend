@@ -27,14 +27,14 @@ function accounts(networkName: string) {
     .filter(Boolean);
 }
 
-const config: HardhatUserConfig = {  
+const config: HardhatUserConfig = {
   defaultNetwork: 'hardhat',
   networks: {
     hardhat: {
       initialBaseFeePerGas: 0, // to fix : https://github.com/sc-forks/solidity-coverage/issues/652, see https://github.com/sc-forks/solidity-coverage/issues/652#issuecomment-896330136
       // process.env.HARDHAT_FORK will specify the network that the fork is made from.
       // this line ensure the use of the corresponding accounts
-      accounts: { mnemonic},
+      accounts: {mnemonic},
       // forking: {
       //   blockNumber: 12540501,
       //   url: node('mainnet'), // May 31, 2021
@@ -88,8 +88,8 @@ const config: HardhatUserConfig = {
   },
   namedAccounts: {
     deployer: 0,
-    owner: 1
-  },  
+    owner: 1,
+  },
   paths: {
     sources: 'src',
   },
@@ -106,7 +106,7 @@ const config: HardhatUserConfig = {
   },
   mocha: {
     timeout: 0,
-  },  
+  },
   solidity: {
     compilers: [
       {

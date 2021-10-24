@@ -5,27 +5,26 @@ pragma solidity 0.7.5;
 import "../types/Ownable.sol";
 
 contract FactoryStorage is Ownable {
-    
     struct BondDetails {
         address _payoutToken;
         address _principleToken;
         address _treasuryAddress;
         address _bondAddress;
         address _initialOwner;
-        uint[] _tierCeilings;
-        uint[] _fees;
+        uint256[] _tierCeilings;
+        uint256[] _fees;
     }
-    
+
     BondDetails[] public bondDetails;
 
     address public factory;
 
-    mapping(address => uint) public indexOfBond;
+    mapping(address => uint256) public indexOfBond;
 
     event BondCreation(address treasury, address bond, address _initialOwner);
-    
+
     /* ======== POLICY FUNCTIONS ======== */
-    
+
     /**
         @notice pushes bond details to array
         @param _payoutToken address
@@ -39,39 +38,40 @@ contract FactoryStorage is Ownable {
         @return _bond address
      */
     function pushBond(
-        address _payoutToken, 
-        address _principleToken, 
-        address _customTreasury, 
-        address _customBond, 
-        address _initialOwner, 
-        uint[] calldata _tierCeilings, 
-        uint[] calldata _fees
-    ) external returns(address _treasury, address _bond) {
+        address _payoutToken,
+        address _principleToken,
+        address _customTreasury,
+        address _customBond,
+        address _initialOwner,
+        uint256[] calldata _tierCeilings,
+        uint256[] calldata _fees
+    ) external returns (address _treasury, address _bond) {
         require(factory == msg.sender, "Not Factory");
 
         indexOfBond[_customBond] = bondDetails.length;
-        
-        bondDetails.push(BondDetails({
-            _payoutToken: _payoutToken,
-            _principleToken: _principleToken,
-            _treasuryAddress: _customTreasury,
-            _bondAddress: _customBond,
-            _initialOwner: _initialOwner,
-            _tierCeilings: _tierCeilings,
-            _fees: _fees
-        }));
+
+        bondDetails.push(
+            BondDetails({
+                _payoutToken: _payoutToken,
+                _principleToken: _principleToken,
+                _treasuryAddress: _customTreasury,
+                _bondAddress: _customBond,
+                _initialOwner: _initialOwner,
+                _tierCeilings: _tierCeilings,
+                _fees: _fees
+            })
+        );
 
         emit BondCreation(_customTreasury, _customBond, _initialOwner);
-        
-        return( _customTreasury, _customBond );
+
+        return (_customTreasury, _customBond);
     }
 
     /**
         @notice changes flux pro factory address
         @param _factory address
      */
-    function setFactoryAddress(address _factory) external onlyPolicy() {
+    function setFactoryAddress(address _factory) external onlyPolicy {
         factory = _factory;
     }
-    
 }

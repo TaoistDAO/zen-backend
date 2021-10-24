@@ -1,5 +1,3 @@
-
-
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
@@ -9,16 +7,15 @@ import "./CustomTreasury.sol";
 import "../interfaces/IFactoryStorage.sol";
 
 contract Factory is Ownable {
-    
-    address immutable public TREASURY;
-    address immutable public FACTORY_STORAGE;
-    address immutable public SUBSIDY_ROUTER;
-    address immutable public DAO;
-    
+    address public immutable TREASURY;
+    address public immutable FACTORY_STORAGE;
+    address public immutable SUBSIDY_ROUTER;
+    address public immutable DAO;
+
     constructor(
-        address _treasury, 
-        address _factoryStorage, 
-        address _subsidyRouter, 
+        address _treasury,
+        address _factoryStorage,
+        address _subsidyRouter,
         address _dao
     ) {
         require(_treasury != address(0), "Factory: treasury must not be zero address");
@@ -30,9 +27,9 @@ contract Factory is Ownable {
         require(_dao != address(0), "Factory: dao must not be zero address");
         DAO = _dao;
     }
-    
+
     /* ======== POLICY FUNCTIONS ======== */
-    
+
     /**
         @notice deploys custom treasury and custom bond contracts and returns address of both
         @param _payoutToken address
@@ -42,34 +39,35 @@ contract Factory is Ownable {
         @return _bond address
      */
     function createBondAndTreasury(
-        address _payoutToken, 
-        address _principleToken, 
-        address _initialOwner, 
-        uint[] calldata _tierCeilings, 
-        uint[] calldata _fees
-    ) external returns(address _treasury, address _bond) {    
+        address _payoutToken,
+        address _principleToken,
+        address _initialOwner,
+        uint256[] calldata _tierCeilings,
+        uint256[] calldata _fees
+    ) external returns (address _treasury, address _bond) {
         CustomTreasury customTreasury = new CustomTreasury(_payoutToken, _initialOwner);
         CustomBond customBond = new CustomBond(
-            address(customTreasury), 
-            _payoutToken, 
-            _principleToken, 
-            TREASURY, 
-            SUBSIDY_ROUTER, 
-            _initialOwner, 
-            DAO, 
-            _tierCeilings, 
+            address(customTreasury),
+            _payoutToken,
+            _principleToken,
+            TREASURY,
+            SUBSIDY_ROUTER,
+            _initialOwner,
+            DAO,
+            _tierCeilings,
             _fees
         );
-        
-        return IFactoryStorage(FACTORY_STORAGE).pushBond(
-            _payoutToken, 
-            _principleToken, 
-            address(customTreasury), 
-            address(customBond), 
-            _initialOwner, 
-            _tierCeilings, 
-            _fees
-        );
+
+        return
+            IFactoryStorage(FACTORY_STORAGE).pushBond(
+                _payoutToken,
+                _principleToken,
+                address(customTreasury),
+                address(customBond),
+                _initialOwner,
+                _tierCeilings,
+                _fees
+            );
     }
 
     /**
@@ -82,34 +80,34 @@ contract Factory is Ownable {
         @return _bond address
      */
     function createBond(
-        address _payoutToken, 
-        address _principleToken, 
-        address _customTreasury, 
-        address _initialOwner, 
-        uint[] calldata _tierCeilings, 
-        uint[] calldata _fees 
-    ) external returns(address _treasury, address _bond) {
+        address _payoutToken,
+        address _principleToken,
+        address _customTreasury,
+        address _initialOwner,
+        uint256[] calldata _tierCeilings,
+        uint256[] calldata _fees
+    ) external returns (address _treasury, address _bond) {
         CustomBond bond = new CustomBond(
-            _customTreasury, 
-            _payoutToken, 
-            _principleToken, 
-            _customTreasury, 
-            SUBSIDY_ROUTER, 
-            _initialOwner, 
-            DAO, 
-            _tierCeilings, 
+            _customTreasury,
+            _payoutToken,
+            _principleToken,
+            _customTreasury,
+            SUBSIDY_ROUTER,
+            _initialOwner,
+            DAO,
+            _tierCeilings,
             _fees
         );
 
-        return IFactoryStorage(FACTORY_STORAGE).pushBond(
-            _payoutToken, 
-            _principleToken,
-            _customTreasury, 
-            address(bond), 
-            _initialOwner, 
-            _tierCeilings, 
-            _fees
-        );
+        return
+            IFactoryStorage(FACTORY_STORAGE).pushBond(
+                _payoutToken,
+                _principleToken,
+                _customTreasury,
+                address(bond),
+                _initialOwner,
+                _tierCeilings,
+                _fees
+            );
     }
-    
 }
