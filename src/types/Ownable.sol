@@ -5,10 +5,9 @@ pragma solidity 0.7.5;
 import "hardhat/console.sol";
 
 contract Ownable {
-
     address public policy;
 
-    constructor () {
+    constructor() {
         policy = msg.sender;
     }
 
@@ -16,8 +15,8 @@ contract Ownable {
         require(policy == msg.sender, "Ownable: caller is not the owner");
         _;
     }
-    
-    function transferManagment(address _newOwner) external onlyPolicy() {
+
+    function transferManagment(address _newOwner) external onlyPolicy {
         require(_newOwner != address(0), "Ownable: newOwner must not be zero address");
         policy = _newOwner;
     }

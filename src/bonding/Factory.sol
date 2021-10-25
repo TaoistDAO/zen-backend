@@ -18,9 +18,9 @@ contract Factory is Ownable {
     event BondCreation(address treasury, address bond, address _initialOwner);
     
     constructor(
-        address _treasury, 
-        address _factoryStorage, 
-        address _subsidyRouter, 
+        address _treasury,
+        address _factoryStorage,
+        address _subsidyRouter,
         address _dao
     ) {
         require(_treasury != address(0), "Factory: treasury must not be zero address");
@@ -32,9 +32,9 @@ contract Factory is Ownable {
         require(_dao != address(0), "Factory: dao must not be zero address");
         DAO = _dao;
     }
-    
+
     /* ======== POLICY FUNCTIONS ======== */
-    
+
     /**
         @notice deploys custom treasury and custom bond contracts and returns address of both
         @param _payoutToken address
@@ -44,12 +44,12 @@ contract Factory is Ownable {
         @return _bond address
      */
     function createBondAndTreasury(
-        address _payoutToken, 
-        address _principleToken, 
-        address _initialOwner, 
-        uint[] calldata _tierCeilings, 
-        uint[] calldata _fees
-    ) external returns(address _treasury, address _bond) {    
+        address _payoutToken,
+        address _principleToken,
+        address _initialOwner,
+        uint256[] calldata _tierCeilings,
+        uint256[] calldata _fees
+    ) external returns (address _treasury, address _bond) {
         CustomTreasury customTreasury = new CustomTreasury(_payoutToken, _initialOwner);
         CustomBond customBond = new CustomBond(
             address(customTreasury), 
@@ -74,6 +74,17 @@ contract Factory is Ownable {
             _tierCeilings, 
             _fees
         );
+
+        return
+            IFactoryStorage(FACTORY_STORAGE).pushBond(
+                _payoutToken,
+                _principleToken,
+                address(customTreasury),
+                address(customBond),
+                _initialOwner,
+                _tierCeilings,
+                _fees
+            );
     }
 
     /**
@@ -86,13 +97,13 @@ contract Factory is Ownable {
         @return _bond address
      */
     function createBond(
-        address _payoutToken, 
-        address _principleToken, 
-        address _customTreasury, 
-        address _initialOwner, 
-        uint[] calldata _tierCeilings, 
-        uint[] calldata _fees 
-    ) external returns(address _treasury, address _bond) {
+        address _payoutToken,
+        address _principleToken,
+        address _customTreasury,
+        address _initialOwner,
+        uint256[] calldata _tierCeilings,
+        uint256[] calldata _fees
+    ) external returns (address _treasury, address _bond) {
         CustomBond bond = new CustomBond(
             _customTreasury, 
             _payoutToken, 
@@ -107,15 +118,15 @@ contract Factory is Ownable {
 
         emit BondCreation(_customTreasury, address(bond), _initialOwner);
 
-        return IFactoryStorage(FACTORY_STORAGE).pushBond(
-            _payoutToken, 
-            _principleToken,
-            _customTreasury, 
-            address(bond), 
-            _initialOwner, 
-            _tierCeilings, 
-            _fees
-        );
+        return
+            IFactoryStorage(FACTORY_STORAGE).pushBond(
+                _payoutToken,
+                _principleToken,
+                _customTreasury,
+                address(bond),
+                _initialOwner,
+                _tierCeilings,
+                _fees
+            );
     }
-    
 }

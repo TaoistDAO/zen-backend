@@ -98,7 +98,7 @@ const config: HardhatUserConfig = {
   },
   mocha: {
     timeout: 0,
-  },  
+  },
   solidity: {
     compilers: [
       {

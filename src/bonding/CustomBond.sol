@@ -13,27 +13,27 @@ import "hardhat/console.sol";
 contract CustomBond is Ownable {
     using FixedPoint for *;
     using SafeERC20 for IERC20;
-    using SafeMath for uint;
+    using SafeMath for uint256;
 
-    event BondCreated( uint deposit, uint payout, uint expires );
+    event BondCreated(uint256 deposit, uint256 payout, uint256 expires);
 
-    event BondRedeemed( address recipient, uint payout, uint remaining );
+    event BondRedeemed(address recipient, uint256 payout, uint256 remaining);
 
-    event BondPriceChanged( uint internalPrice, uint debtRatio );
-    
-    event ControlVariableAdjustment( uint initialBCV, uint newBCV, uint adjustment, bool addition );
-        
+    event BondPriceChanged(uint256 internalPrice, uint256 debtRatio);
+
+    event ControlVariableAdjustment(uint256 initialBCV, uint256 newBCV, uint256 adjustment, bool addition);
+
     IERC20 public immutable PAYOUT_TOKEN; // token paid for principal
     IERC20 public immutable PRINCIPAL_TOKEN; // inflow token
     ITreasury public immutable CUSTOM_TREASURY; // pays for and receives principal
     address public immutable DAO;
-    address public immutable SUBSIDY_ROUTER; // pays subsidy in OHM to custom treasury
+    address public immutable SUBSIDY_ROUTER; // pays subsidy in TAO to custom treasury
     address public OLY_TREASURY; // receives fee
-    uint public totalPrincipalBonded;
-    uint public totalPayoutGiven;    
-    uint public totalDebt; // total value of outstanding bonds; used for pricing
-    uint public lastDecay; // reference block for debt decay
-    uint public payoutSinceLastSubsidy; // principal accrued since subsidy paid
+    uint256 public totalPrincipalBonded;
+    uint256 public totalPayoutGiven;
+    uint256 public totalDebt; // total value of outstanding bonds; used for pricing
+    uint256 public lastDecay; // reference block for debt decay
+    uint256 public payoutSinceLastSubsidy; // principal accrued since subsidy paid
     Terms public terms; // stores terms for new bonds
     Adjust public adjustment; // stores adjustment to BCV data
     FeeTiers[] private feeTiers; // stores fee tiers
@@ -42,46 +42,46 @@ contract CustomBond is Ownable {
     mapping(address => Bond) public bondInfo; // stores bond information for depositors
     
     struct FeeTiers {
-        uint tierCeilings; // principal bonded till next tier
-        uint fees; // in ten-thousandths (i.e. 33300 = 3.33%)
+        uint256 tierCeilings; // principal bonded till next tier
+        uint256 fees; // in ten-thousandths (i.e. 33300 = 3.33%)
     }
 
     // Info for creating new bonds
     struct Terms {
-        uint controlVariable; // scaling variable for price
-        uint vestingTerm; // in blocks
-        uint minimumPrice; // vs principal value
-        uint maxPayout; // in thousandths of a %. i.e. 500 = 0.5%
-        uint maxDebt; // payout token decimal debt ratio, max % total supply created as debt
+        uint256 controlVariable; // scaling variable for price
+        uint256 vestingTerm; // in blocks
+        uint256 minimumPrice; // vs principal value
+        uint256 maxPayout; // in thousandths of a %. i.e. 500 = 0.5%
+        uint256 maxDebt; // payout token decimal debt ratio, max % total supply created as debt
     }
 
     // Info for bond holder
     struct Bond {
-        uint payout; // payout token remaining to be paid
-        uint vesting; // Blocks left to vest
-        uint lastBlock; // Last interaction
-        uint truePricePaid; // Price paid (principal tokens per payout token) in ten-millionths - 4000000 = 0.4
+        uint256 payout; // payout token remaining to be paid
+        uint256 vesting; // Blocks left to vest
+        uint256 lastBlock; // Last interaction
+        uint256 truePricePaid; // Price paid (principal tokens per payout token) in ten-millionths - 4000000 = 0.4
     }
 
-    // Info for incremental adjustments to control variable 
+    // Info for incremental adjustments to control variable
     struct Adjust {
         bool add; // addition or subtraction
-        uint rate; // increment
-        uint target; // BCV when adjustment finished
-        uint buffer; // minimum length (in blocks) between adjustments
-        uint lastBlock; // block when last adjustment made
+        uint256 rate; // increment
+        uint256 target; // BCV when adjustment finished
+        uint256 buffer; // minimum length (in blocks) between adjustments
+        uint256 lastBlock; // block when last adjustment made
     }
-    
+
     constructor(
-        address _customTreasury, 
-        address _payoutToken, 
-        address _principalToken, 
+        address _customTreasury,
+        address _payoutToken,
+        address _principalToken,
         address _olyTreasury,
-        address _subsidyRouter, 
-        address _initialOwner, 
+        address _subsidyRouter,
+        address _initialOwner,
         address _dao,
-        uint[] memory _tierCeilings, 
-        uint[] memory _fees
+        uint256[] memory _tierCeilings,
+        uint256[] memory _fees
     ) {
         require(_customTreasury != address(0), "ProFactory: customTreasury must not be zero address");
         CUSTOM_TREASURY = ITreasury(_customTreasury);
@@ -99,18 +99,15 @@ contract CustomBond is Ownable {
         DAO = _dao;
         require(_tierCeilings.length == _fees.length, "tier length and fee length not the same");
 
-        for(uint i; i < _tierCeilings.length; i++) {
-            feeTiers.push( FeeTiers({
-                tierCeilings: _tierCeilings[i],
-                fees: _fees[i]
-            }));
+        for (uint256 i; i < _tierCeilings.length; i++) {
+            feeTiers.push(FeeTiers({tierCeilings: _tierCeilings[i], fees: _fees[i]}));
         }
-        
+
         lpTokenAsFeeFlag = true;
     }
 
     /* ======== INITIALIZATION ======== */
-    
+
     /**
      *  @notice initializes bond parameters
      *  @param _controlVariable uint
@@ -120,16 +117,16 @@ contract CustomBond is Ownable {
      *  @param _maxDebt uint
      *  @param _initialDebt uint
      */
-    function initializeBond( 
-        uint _controlVariable, 
-        uint _vestingTerm,
-        uint _minimumPrice,
-        uint _maxPayout,
-        uint _maxDebt,
-        uint _initialDebt
-    ) external onlyPolicy() {
+    function initializeBond(
+        uint256 _controlVariable,
+        uint256 _vestingTerm,
+        uint256 _minimumPrice,
+        uint256 _maxPayout,
+        uint256 _maxDebt,
+        uint256 _initialDebt
+    ) external onlyPolicy {
         require(currentDebt() == 0, "Debt must be 0 for initialization");
-        terms = Terms ({
+        terms = Terms({
             controlVariable: _controlVariable,
             vestingTerm: _vestingTerm,
             minimumPrice: _minimumPrice,
@@ -139,32 +136,39 @@ contract CustomBond is Ownable {
         totalDebt = _initialDebt;
         lastDecay = block.number;
     }
-    
 
-     /**
+    /**
      *  @notice set control variable adjustment
      *  @param _lpTokenAsFeeFlag bool
      */
-    function setLPtokenAsFee(bool _lpTokenAsFeeFlag) external onlyPolicy() {
+    function setLPtokenAsFee(bool _lpTokenAsFeeFlag) external onlyPolicy {
         lpTokenAsFeeFlag = _lpTokenAsFeeFlag;
     }
-    
+
     /* ======== POLICY FUNCTIONS ======== */
 
-    enum PARAMETER { VESTING, PAYOUT, DEBT }
+    enum PARAMETER {
+        VESTING,
+        PAYOUT,
+        DEBT
+    }
+
     /**
      *  @notice set parameters for new bonds
      *  @param _parameter PARAMETER
      *  @param _input uint
      */
-    function setBondTerms(PARAMETER _parameter, uint _input) external onlyPolicy() {
-        if (_parameter == PARAMETER.VESTING) { // 0
-            require( _input >= 10000, "Vesting must be longer than 36 hours" );
+    function setBondTerms(PARAMETER _parameter, uint256 _input) external onlyPolicy {
+        if (_parameter == PARAMETER.VESTING) {
+            // 0
+            require(_input >= 10000, "Vesting must be longer than 36 hours");
             terms.vestingTerm = _input;
-        } else if (_parameter == PARAMETER.PAYOUT) { // 1
-            require( _input <= 1000, "Payout cannot be above 1 percent" );
+        } else if (_parameter == PARAMETER.PAYOUT) {
+            // 1
+            require(_input <= 1000, "Payout cannot be above 1 percent");
             terms.maxPayout = _input;
-        } else if (_parameter == PARAMETER.DEBT) { // 2
+        } else if (_parameter == PARAMETER.DEBT) {
+            // 2
             terms.maxDebt = _input;
         }
     }
@@ -176,13 +180,13 @@ contract CustomBond is Ownable {
      *  @param _target uint
      *  @param _buffer uint
      */
-    function setAdjustment( 
+    function setAdjustment(
         bool _addition,
-        uint _increment, 
-        uint _target,
-        uint _buffer 
-    ) external onlyPolicy() {
-        require(_increment <= terms.controlVariable.mul(30).div(1000), "Increment too large" );
+        uint256 _increment,
+        uint256 _target,
+        uint256 _buffer
+    ) external onlyPolicy {
+        require(_increment <= terms.controlVariable.mul(30).div(1000), "Increment too large");
 
         adjustment = Adjust({
             add: _addition,
@@ -206,15 +210,15 @@ contract CustomBond is Ownable {
      *  @notice subsidy controller checks payouts since last subsidy and resets counter
      *  @return payoutSinceLastSubsidy_ uint
      */
-    function paySubsidy() external returns (uint payoutSinceLastSubsidy_) {
+    function paySubsidy() external returns (uint256 payoutSinceLastSubsidy_) {
         require(msg.sender == SUBSIDY_ROUTER, "Only subsidy controller");
 
         payoutSinceLastSubsidy_ = payoutSinceLastSubsidy;
         payoutSinceLastSubsidy = 0;
     }
-    
+
     /* ======== USER FUNCTIONS ======== */
-    
+
     /**
      *  @notice deposit bond
      *  @param _amount uint
@@ -222,20 +226,24 @@ contract CustomBond is Ownable {
      *  @param _depositor address
      *  @return uint
      */
-    function deposit(uint _amount, uint _maxPrice, address _depositor) external returns (uint) {
+    function deposit(
+        uint256 _amount,
+        uint256 _maxPrice,
+        address _depositor
+    ) external returns (uint256) {
         require(_depositor != address(0), "Invalid address");
 
         decayDebt();
         require(totalDebt <= terms.maxDebt, "Max capacity reached");
-        
-        uint nativePrice = trueBondPrice();
+
+        uint256 nativePrice = trueBondPrice();
 
         require(_maxPrice >= nativePrice, "Slippage limit: more than max price"); // slippage protection
 
-        uint value = CUSTOM_TREASURY.valueOfToken(address(PRINCIPAL_TOKEN), _amount);
-        uint payout = _payoutFor(value); // payout to bonder is computed
+        uint256 value = CUSTOM_TREASURY.valueOfToken(address(PRINCIPAL_TOKEN), _amount);
+        uint256 payout = _payoutFor(value); // payout to bonder is computed
 
-        require(payout >= 10 ** PAYOUT_TOKEN.decimals() / 100, "Bond too small"); // must be > 0.01 payout token ( underflow protection )
+        require(payout >= 10**PAYOUT_TOKEN.decimals() / 100, "Bond too small"); // must be > 0.01 payout token ( underflow protection )
         require(payout <= maxPayout(), "Bond too large"); // size protection because there is no slippage
         
         /**
@@ -246,18 +254,18 @@ contract CustomBond is Ownable {
         PRINCIPAL_TOKEN.safeTransferFrom(msg.sender, address(this), _amount);
 
         // profits are calculated
-        uint fee;
+        uint256 fee;
         /**
             principal is been taken as fee
             and trasfered to dao
          */
-        if(lpTokenAsFeeFlag){
-            fee = _amount.mul(currentOlympusFee()).div(1e6);
-            if(fee != 0){
+        if (lpTokenAsFeeFlag) {
+            fee = _amount.mul(currentFluxFee()).div(1e6);
+            if (fee != 0) {
                 PRINCIPAL_TOKEN.transfer(OLY_TREASURY, fee);
             }
-        }else{
-            fee = payout.mul(currentOlympusFee()).div(1e6);
+        } else {
+            fee = payout.mul(currentFluxFee()).div(1e6);
         }
 
         PRINCIPAL_TOKEN.approve(address(CUSTOM_TREASURY), _amount);
@@ -266,7 +274,7 @@ contract CustomBond is Ownable {
         if (!lpTokenAsFeeFlag && fee != 0) { // fee is transferred to dao 
             PAYOUT_TOKEN.transfer(OLY_TREASURY, fee);
         }
-        
+
         // total debt is increased
         totalDebt = totalDebt.add(value);                
 
@@ -297,10 +305,10 @@ contract CustomBond is Ownable {
         payoutSinceLastSubsidy = payoutSinceLastSubsidy.add(payout); // subsidy counter increased
      
         adjust(); // control variable is adjusted
-        return payout; 
+        return payout;
     }
-    
-    /** 
+
+    /**
      *  @notice redeem bond for user
      *  @return uint
      */ 
@@ -320,7 +328,7 @@ contract CustomBond is Ownable {
             return info.payout;
         } else { // if unfinished
             // calculate payout vested
-            uint payout = info.payout.mul(percentVested).div(10000);
+            uint256 payout = info.payout.mul(percentVested).div(10000);
 
             // store updated deposit info
             bondInfo[_depositor] = Bond({
@@ -338,18 +346,17 @@ contract CustomBond is Ownable {
 
             return payout;
         }
-        
     }
-    
+
     /* ======== INTERNAL HELPER FUNCTIONS ======== */
 
     /**
      *  @notice makes incremental adjustment to control variable
      */
     function adjust() internal {
-        uint blockCanAdjust = adjustment.lastBlock.add(adjustment.buffer);
-        if(adjustment.rate != 0 && block.number >= blockCanAdjust) {
-            uint initial = terms.controlVariable;
+        uint256 blockCanAdjust = adjustment.lastBlock.add(adjustment.buffer);
+        if (adjustment.rate != 0 && block.number >= blockCanAdjust) {
+            uint256 initial = terms.controlVariable;
             if (adjustment.add) {
                 terms.controlVariable = terms.controlVariable.add(adjustment.rate);
                 if (terms.controlVariable >= adjustment.target) {
@@ -378,15 +385,14 @@ contract CustomBond is Ownable {
      *  @notice calculate current bond price and remove floor if above
      *  @return price_ uint
      */
-    function _bondPrice() internal returns (uint price_) {
-        price_ = terms.controlVariable.mul(debtRatio()).div(10 ** (uint256(PAYOUT_TOKEN.decimals()).sub(5)));
+    function _bondPrice() internal returns (uint256 price_) {
+        price_ = terms.controlVariable.mul(debtRatio()).div(10**(uint256(PAYOUT_TOKEN.decimals()).sub(5)));
         if (price_ < terms.minimumPrice) {
-            price_ = terms.minimumPrice;        
+            price_ = terms.minimumPrice;
         } else if (terms.minimumPrice != 0) {
             terms.minimumPrice = 0;
         }
     }
-
 
     /* ======== VIEW FUNCTIONS ======== */
 
@@ -394,8 +400,8 @@ contract CustomBond is Ownable {
      *  @notice calculate current bond premium
      *  @return price_ uint
      */
-    function bondPrice() public view returns (uint price_) {        
-        price_ = terms.controlVariable.mul(debtRatio()).div(10 ** (uint256(PAYOUT_TOKEN.decimals()).sub(5)));
+    function bondPrice() public view returns (uint256 price_) {
+        price_ = terms.controlVariable.mul(debtRatio()).div(10**(uint256(PAYOUT_TOKEN.decimals()).sub(5)));
         if (price_ < terms.minimumPrice) {
             price_ = terms.minimumPrice;
         }
@@ -405,8 +411,8 @@ contract CustomBond is Ownable {
      *  @notice calculate true bond price a user pays
      *  @return price_ uint
      */
-    function trueBondPrice() public view returns (uint price_) {
-        price_ = bondPrice().add(bondPrice().mul(currentOlympusFee()).div(1e6));
+    function trueBondPrice() public view returns (uint256 price_) {
+        price_ = bondPrice().add(bondPrice().mul(currentFluxFee()).div(1e6));
     }
 
     /**
@@ -414,7 +420,7 @@ contract CustomBond is Ownable {
      *  @return uint
      */
     function maxPayout() public view returns (uint) {
-        uint totalSupply = PAYOUT_TOKEN.totalSupply();
+        uint256 totalSupply = PAYOUT_TOKEN.totalSupply();
         if(totalSupply > 10**18) totalSupply = 10**18;
         return totalSupply.mul(terms.maxPayout).div(100000);
     }
@@ -424,37 +430,37 @@ contract CustomBond is Ownable {
      *  @param _value uint
      *  @return uint
      */
-    function _payoutFor(uint _value) internal view returns (uint) {
+    function _payoutFor(uint256 _value) internal view returns (uint256) {
         return FixedPoint.fraction(_value, bondPrice()).decode112with18().div(1e11);
     }
 
     /**
-     *  @notice calculate user's interest due for new bond, accounting for Olympus Fee
+     *  @notice calculate user's interest due for new bond, accounting for Flux Fee
      *  @param _value uint
      *  @return uint
      */
-    function payoutFor(uint _value) external view returns (uint) {
-        uint total = FixedPoint.fraction(_value, bondPrice()).decode112with18().div(1e11);
-        return total.sub(total.mul(currentOlympusFee()).div(1e6));
+    function payoutFor(uint256 _value) external view returns (uint256) {
+        uint256 total = FixedPoint.fraction(_value, bondPrice()).decode112with18().div(1e11);
+        return total.sub(total.mul(currentFluxFee()).div(1e6));
     }
 
     /**
      *  @notice calculate current ratio of debt to payout token supply
-     *  @notice protocols using Olympus Pro should be careful when quickly adding large %s to total supply
+     *  @notice protocols using Flux Pro should be careful when quickly adding large %s to total supply
      *  @return debtRatio_ uint
      */
-    function debtRatio() public view returns (uint debtRatio_) {   
-        debtRatio_ = FixedPoint.fraction( 
-            currentDebt().mul(10 ** PAYOUT_TOKEN.decimals()), 
-            PAYOUT_TOKEN.totalSupply()
-        ).decode112with18().div(1e18);
+    function debtRatio() public view returns (uint256 debtRatio_) {
+        debtRatio_ = FixedPoint
+            .fraction(currentDebt().mul(10**PAYOUT_TOKEN.decimals()), PAYOUT_TOKEN.totalSupply())
+            .decode112with18()
+            .div(1e18);
     }
 
     /**
      *  @notice calculate debt factoring in decay
      *  @return uint
      */
-    function currentDebt() public view returns (uint) {
+    function currentDebt() public view returns (uint256) {
         return totalDebt.sub(debtDecay());
     }
 
@@ -462,24 +468,23 @@ contract CustomBond is Ownable {
      *  @notice amount to decay total debt by
      *  @return decay_ uint
      */
-    function debtDecay() public view returns (uint decay_) {
-        uint blocksSinceLast = block.number.sub(lastDecay);
+    function debtDecay() public view returns (uint256 decay_) {
+        uint256 blocksSinceLast = block.number.sub(lastDecay);
         decay_ = totalDebt.mul(blocksSinceLast).div(terms.vestingTerm);
         if (decay_ > totalDebt) {
             decay_ = totalDebt;
         }
     }
 
-
     /**
      *  @notice calculate how far into vesting a depositor is
      *  @param _depositor address
      *  @return percentVested_ uint
      */
-    function percentVestedFor(address _depositor) public view returns (uint percentVested_) {
+    function percentVestedFor(address _depositor) public view returns (uint256 percentVested_) {
         Bond memory bond = bondInfo[_depositor];
-        uint blocksSinceLast = block.number.sub(bond.lastBlock);
-        uint vesting = bond.vesting;
+        uint256 blocksSinceLast = block.number.sub(bond.lastBlock);
+        uint256 vesting = bond.vesting;
 
         if (vesting > 0) {
             percentVested_ = blocksSinceLast.mul(10000).div(vesting);
@@ -493,9 +498,9 @@ contract CustomBond is Ownable {
      *  @param _depositor address
      *  @return pendingPayout_ uint
      */
-    function pendingPayoutFor(address _depositor) external view returns (uint pendingPayout_) {
-        uint percentVested = percentVestedFor(_depositor);
-        uint payout = bondInfo[_depositor].payout;
+    function pendingPayoutFor(address _depositor) external view returns (uint256 pendingPayout_) {
+        uint256 percentVested = percentVestedFor(_depositor);
+        uint256 payout = bondInfo[_depositor].payout;
 
         if (percentVested >= 10000) {
             pendingPayout_ = payout;
@@ -505,16 +510,15 @@ contract CustomBond is Ownable {
     }
 
     /**
-     *  @notice current fee Olympus takes of each bond
+     *  @notice current fee Flux takes of each bond
      *  @return currentFee_ uint
      */
-    function currentOlympusFee() public view returns(uint currentFee_) {
-        uint tierLength = feeTiers.length;
-        for(uint i; i < tierLength; i++) {
-            if(totalPrincipalBonded < feeTiers[i].tierCeilings || i == tierLength - 1) {
+    function currentFluxFee() public view returns (uint256 currentFee_) {
+        uint256 tierLength = feeTiers.length;
+        for (uint256 i; i < tierLength; i++) {
+            if (totalPrincipalBonded < feeTiers[i].tierCeilings || i == tierLength - 1) {
                 return feeTiers[i].fees;
             }
         }
     }
-    
 }
