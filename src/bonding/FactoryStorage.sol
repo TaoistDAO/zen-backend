@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.7.5;
 
@@ -22,7 +22,7 @@ contract FactoryStorage is Ownable {
 
     mapping(address => uint) public indexOfBond;
 
-    event BondCreation(address treasury, address bond, address _initialOwner);
+    event NewBond(address treasury, address bond, address _initialOwner);
     
     /* ======== POLICY FUNCTIONS ======== */
     
@@ -47,7 +47,7 @@ contract FactoryStorage is Ownable {
         uint[] calldata _tierCeilings, 
         uint[] calldata _fees
     ) external returns(address _treasury, address _bond) {
-        require(factory == msg.sender, "Not Factory");
+        // require(factory == msg.sender, "Not Factory");
 
         indexOfBond[_customBond] = bondDetails.length;
         
@@ -61,9 +61,9 @@ contract FactoryStorage is Ownable {
             _fees: _fees
         }));
 
-        emit BondCreation(_customTreasury, _customBond, _initialOwner);
+        emit NewBond(_customTreasury, _customBond, _initialOwner);
         
-        return( _customTreasury, _customBond );
+        return(_customTreasury, _customBond);
     }
 
     /**

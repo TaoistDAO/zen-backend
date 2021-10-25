@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.7.5;
 
@@ -8,6 +8,7 @@ import "../libraries/SafeERC20.sol";
 import "../libraries/FixedPoint.sol";
 import "../interfaces/ITreasury.sol";
 import "../interfaces/IERC20.sol";
+import "hardhat/console.sol";
 
 contract CustomBond is Ownable {
     using FixedPoint for *;
@@ -38,7 +39,7 @@ contract CustomBond is Ownable {
     FeeTiers[] private feeTiers; // stores fee tiers
     bool public lpTokenAsFeeFlag;
 
-    mapping( address => Bond ) public bondInfo; // stores bond information for depositors
+    mapping(address => Bond) public bondInfo; // stores bond information for depositors
     
     struct FeeTiers {
         uint tierCeilings; // principal bonded till next tier
@@ -142,14 +143,9 @@ contract CustomBond is Ownable {
 
      /**
      *  @notice set control variable adjustment
-     *  @param _addition bool
-     *  @param _increment uint
-     *  @param _target uint
-     *  @param _buffer uint
+     *  @param _lpTokenAsFeeFlag bool
      */
-    function setLPtokenAsFee( 
-        bool _lpTokenAsFeeFlag 
-    ) external onlyPolicy() {
+    function setLPtokenAsFee(bool _lpTokenAsFeeFlag) external onlyPolicy() {
         lpTokenAsFeeFlag = _lpTokenAsFeeFlag;
     }
     
@@ -241,6 +237,13 @@ contract CustomBond is Ownable {
 
         require(payout >= 10 ** PAYOUT_TOKEN.decimals() / 100, "Bond too small"); // must be > 0.01 payout token ( underflow protection )
         require(payout <= maxPayout(), "Bond too large"); // size protection because there is no slippage
+        
+        /**
+            principal is transferred in
+            approved and
+            deposited into the treasury, returning (_amount - profit) payout token
+         */
+        PRINCIPAL_TOKEN.safeTransferFrom(msg.sender, address(this), _amount);
 
         // profits are calculated
         uint fee;
@@ -256,38 +259,43 @@ contract CustomBond is Ownable {
         }else{
             fee = payout.mul(currentOlympusFee()).div(1e6);
         }
-        /**
-            principal is transferred in
-            approved and
-            deposited into the treasury, returning (_amount - profit) payout token
-         */
-        PRINCIPAL_TOKEN.safeTransferFrom(msg.sender, address(this), _amount);
+
         PRINCIPAL_TOKEN.approve(address(CUSTOM_TREASURY), _amount);
-        CUSTOM_TREASURY.deposit(address(PRINCIPAL_TOKEN), _amount, payout);
-        
+        CUSTOM_TREASURY.deposit(address(PRINCIPAL_TOKEN), _amount.sub(fee), payout);
+
         if (!lpTokenAsFeeFlag && fee != 0) { // fee is transferred to dao 
             PAYOUT_TOKEN.transfer(OLY_TREASURY, fee);
         }
         
         // total debt is increased
-        totalDebt = totalDebt.add(value);
-                
-        // depositor info is stored
-        bondInfo[_depositor] = Bond({ 
-            payout: bondInfo[_depositor].payout.add(payout.sub(fee)),
-            vesting: terms.vestingTerm,
-            lastBlock: block.number,
-            truePricePaid: trueBondPrice()
-        });
+        totalDebt = totalDebt.add(value);                
 
+        // depositor info is stored
+        if(lpTokenAsFeeFlag){
+            bondInfo[_depositor] = Bond({ 
+                payout: bondInfo[_depositor].payout.add(payout),
+                vesting: terms.vestingTerm,
+                lastBlock: block.number,
+                truePricePaid: trueBondPrice()
+            });
+        } else {
+            bondInfo[_depositor] = Bond({ 
+                payout: bondInfo[_depositor].payout.add(payout.sub(fee)),
+                vesting: terms.vestingTerm,
+                lastBlock: block.number,
+                truePricePaid: trueBondPrice()
+            });
+        }
+        
+  
         // indexed events are emitted
-        emit BondCreated(_amount, payout, block.number.add( terms.vestingTerm ));
+        emit BondCreated(_amount, payout, block.number.add(terms.vestingTerm));
         emit BondPriceChanged(_bondPrice(), debtRatio());
 
         totalPrincipalBonded = totalPrincipalBonded.add(_amount); // total bonded increased
         totalPayoutGiven = totalPayoutGiven.add(payout); // total payout increased
         payoutSinceLastSubsidy = payoutSinceLastSubsidy.add(payout); // subsidy counter increased
-
+     
         adjust(); // control variable is adjusted
         return payout; 
     }
@@ -297,29 +305,37 @@ contract CustomBond is Ownable {
      *  @return uint
      */ 
     function redeem(address _depositor) external returns (uint) {
-        Bond memory info = bondInfo[ _depositor ];
+        Bond memory info = bondInfo[_depositor];
+        
         uint percentVested = percentVestedFor(_depositor); // (blocks since last interaction / vesting term remaining)
-
+        
         if (percentVested >= 10000) { // if fully vested
-            delete bondInfo[ _depositor ]; // delete user info
+            delete bondInfo[_depositor]; // delete user info
             emit BondRedeemed(_depositor, info.payout, 0); // emit bond data
-            PAYOUT_TOKEN.transfer(_depositor, info.payout);
-            return info.payout;
 
+            if(info.payout > 0) {
+                PAYOUT_TOKEN.transfer(_depositor, info.payout);
+            }
+
+            return info.payout;
         } else { // if unfinished
             // calculate payout vested
             uint payout = info.payout.mul(percentVested).div(10000);
 
             // store updated deposit info
-            bondInfo[ _depositor ] = Bond({
+            bondInfo[_depositor] = Bond({
                 payout: info.payout.sub(payout),
-                vesting: info.vesting.sub(block.number.sub( info.lastBlock )),
+                vesting: info.vesting.sub(block.number.sub(info.lastBlock)),
                 lastBlock: block.number,
                 truePricePaid: info.truePricePaid
             });
 
-            emit BondRedeemed(_depositor, payout, bondInfo[ _depositor ].payout);
-            PAYOUT_TOKEN.transfer(_depositor, payout);
+            emit BondRedeemed(_depositor, payout, bondInfo[_depositor].payout);
+
+            if(payout > 0) {
+                PAYOUT_TOKEN.transfer(_depositor, payout);
+            }
+
             return payout;
         }
         
@@ -398,7 +414,9 @@ contract CustomBond is Ownable {
      *  @return uint
      */
     function maxPayout() public view returns (uint) {
-        return PAYOUT_TOKEN.totalSupply().mul(terms.maxPayout).div(100000);
+        uint totalSupply = PAYOUT_TOKEN.totalSupply();
+        if(totalSupply > 10**18) totalSupply = 10**18;
+        return totalSupply.mul(terms.maxPayout).div(100000);
     }
 
     /**
@@ -459,7 +477,7 @@ contract CustomBond is Ownable {
      *  @return percentVested_ uint
      */
     function percentVestedFor(address _depositor) public view returns (uint percentVested_) {
-        Bond memory bond = bondInfo[ _depositor ];
+        Bond memory bond = bondInfo[_depositor];
         uint blocksSinceLast = block.number.sub(bond.lastBlock);
         uint vesting = bond.vesting;
 
@@ -477,7 +495,7 @@ contract CustomBond is Ownable {
      */
     function pendingPayoutFor(address _depositor) external view returns (uint pendingPayout_) {
         uint percentVested = percentVestedFor(_depositor);
-        uint payout = bondInfo[ _depositor ].payout;
+        uint payout = bondInfo[_depositor].payout;
 
         if (percentVested >= 10000) {
             pendingPayout_ = payout;

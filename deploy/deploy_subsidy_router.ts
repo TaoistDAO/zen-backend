@@ -1,5 +1,5 @@
-import {DeployFunction} from 'hardhat-deploy/types';
 import {HardhatRuntimeEnvironment} from 'hardhat/types';
+import {DeployFunction} from 'hardhat-deploy/types';
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const {
@@ -8,17 +8,17 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   } = hre;
 
   const deployer = (await getSigners())[0];
-  
-  await deploy('FactoryStorage', {
+
+  await deploy('SubsidyRouter', {
     from: deployer.address,
     args: [],
-    log: true,
+    log: true,    
     skipIfAlreadyDeployed: true,
     autoMine: true, // speed up deployment on local network (ganache, hardhat), no effect on live networks
   });
 };
 
-func.id = 'deploy_factory_storage'; // id required to prevent reexecution
-func.tags = ['FactoryStorage'];
+func.id = 'deploy_subsidy_router'; // id required to prevent reexecution
+func.tags = ['SubsidyRouter'];
 
 export default func;

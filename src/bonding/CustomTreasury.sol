@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.7.5;
 
@@ -6,6 +6,7 @@ import "../types/Ownable.sol";
 import "../libraries/SafeMath.sol";
 import "../libraries/SafeERC20.sol";
 import "../interfaces/IERC20.sol";
+import "hardhat/console.sol";
 
 contract CustomTreasury is Ownable {
     
@@ -38,6 +39,8 @@ contract CustomTreasury is Ownable {
     function deposit(address _principleTokenAddress, uint _amountPrincipleToken, uint _amountPayoutToken) external {
         require(bondContract[msg.sender], "msg.sender is not a bond contract");
         IERC20(_principleTokenAddress).safeTransferFrom(msg.sender, address(this), _amountPrincipleToken);
+
+        require(IERC20(PAYOUT_TOKEN).balanceOf(address(this)) >= _amountPayoutToken, "Transfer amount exceeds balance");
         IERC20(PAYOUT_TOKEN).safeTransfer(msg.sender, _amountPayoutToken);
     }
 

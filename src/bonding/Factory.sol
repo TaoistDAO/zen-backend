@@ -1,6 +1,6 @@
 
 
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.7.5;
 
 import "../types/Ownable.sol";
@@ -14,6 +14,8 @@ contract Factory is Ownable {
     address immutable public FACTORY_STORAGE;
     address immutable public SUBSIDY_ROUTER;
     address immutable public DAO;
+    
+    event BondCreation(address treasury, address bond, address _initialOwner);
     
     constructor(
         address _treasury, 
@@ -60,7 +62,9 @@ contract Factory is Ownable {
             _tierCeilings, 
             _fees
         );
-        
+
+        emit BondCreation(address(customTreasury), address(customBond), _initialOwner);
+
         return IFactoryStorage(FACTORY_STORAGE).pushBond(
             _payoutToken, 
             _principleToken, 
@@ -100,6 +104,8 @@ contract Factory is Ownable {
             _tierCeilings, 
             _fees
         );
+
+        emit BondCreation(_customTreasury, address(bond), _initialOwner);
 
         return IFactoryStorage(FACTORY_STORAGE).pushBond(
             _payoutToken, 
