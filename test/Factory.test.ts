@@ -6,7 +6,7 @@ import { MockToken } from '../typechain/MockToken';
 import { BigNumber, BigNumberish, utils } from 'ethers';
 const ERC20 = require('./utils/ERC20.json');
 
-
+// TEST : Rinkeby testnet
 const setup = deployments.createFixture(async () => {
   await deployments.fixture('Factory');
   
@@ -17,12 +17,11 @@ const setup = deployments.createFixture(async () => {
     MockTokenContract: <MockToken>await ethers.getContract('MockToken'),
   };
   
-  const payoutTokenAddr = "0xeb8f08a975ab53e34d8a0330e0d34de942c95926";//usdc in rinkeby
-  const daiAddress = "0x5592ec0cfb4dbc12d3ab100b257153436a1f0fea";//Dai in rinkeby
+  
   const [deployer, user] = await ethers.getSigners();
   
   return {
-    ...contracts, deployer, user, payoutTokenAddr
+    ...contracts, deployer, user
   };
 });
 
@@ -54,12 +53,12 @@ describe('Factory', function () {
     const {
       FactoryContract, 
       MockTokenContract,
-      deployer, user, payoutTokenAddr
+      deployer, user
     } = await setup();
     
     const mToken = await MockTokenContract.deployed();
     const tx = await FactoryContract.connect(user).createBondAndTreasury(
-      payoutTokenAddr, 
+      config.payoutTokenAddr, 
       mToken.address, 
       user.address, 
       config.tierCeilings, 
@@ -77,7 +76,7 @@ describe('Factory', function () {
 
   it('createBond', async function () {
     const {
-      deployer, user, payoutTokenAddr,
+      deployer, user,
       FactoryContract,
       MockTokenContract
     } = await setup();
@@ -85,7 +84,7 @@ describe('Factory', function () {
     const _customTreasury = '0x31F8Cc382c9898b273eff4e0b7626a6987C846E8';
     const mToken = await MockTokenContract.deployed();
     const tx = await FactoryContract.connect(user).createBond(
-      payoutTokenAddr, 
+      config.payoutTokenAddr, 
       mToken.address, 
       _customTreasury,
       user.address, 
@@ -107,7 +106,7 @@ describe('Factory', function () {
 describe('CustomBond', async function () {
   beforeEach(async function () {
     const {
-      deployer, user, payoutTokenAddr,
+      deployer, user,
       FactoryContract,
       MockTokenContract
     } = await setup();
@@ -117,7 +116,7 @@ describe('CustomBond', async function () {
     this.deployerAddr = deployer.address;
 
     const tx = await FactoryContract.createBondAndTreasury(
-      payoutTokenAddr, 
+      config.payoutTokenAddr, 
       mToken.address, 
       deployer.address, 
       config.tierCeilings, 
@@ -204,7 +203,7 @@ describe('CustomBond', async function () {
 describe('CustomBond-deposit', async function () {
   it('deposit(deployer)', async function () {      
     const {
-      deployer, user, payoutTokenAddr,
+      deployer, user,
       FactoryContract,
       MockTokenContract
     } = await setup();
@@ -216,7 +215,7 @@ describe('CustomBond-deposit', async function () {
     const principleToken = await MockTokenContract.deployed();
 
     const tx = await FactoryContract.createBondAndTreasury(
-      payoutTokenAddr, 
+      config.payoutTokenAddr, 
       principleToken.address, 
       deployer.address, 
       config.tierCeilings, 
@@ -256,7 +255,7 @@ describe('CustomBond-deposit', async function () {
     
     // deposit     
     const tokenContract = new ethers.Contract(principleToken.address, JSON.stringify(ERC20), ethers.provider)
-    const payoutTokenContract = new ethers.Contract(payoutTokenAddr, JSON.stringify(ERC20), ethers.provider)
+    const payoutTokenContract = new ethers.Contract(config.payoutTokenAddr, JSON.stringify(ERC20), ethers.provider)
     const daiBalance = Number(await payoutTokenContract.balanceOf(deployer.address));//2000000000000000000
     
     //Approve(principleToken) to deposit in frontend(user)
@@ -302,7 +301,7 @@ describe('CustomBond-deposit', async function () {
 
   it('deposit(user)', async function () {      
     const {
-      deployer, user, payoutTokenAddr,
+      deployer, user,
       FactoryContract,
       MockTokenContract
     } = await setup();
@@ -314,7 +313,7 @@ describe('CustomBond-deposit', async function () {
     const principleToken = await MockTokenContract.deployed();
 
     const tx = await FactoryContract.connect(user).createBondAndTreasury(
-      payoutTokenAddr, 
+      config.payoutTokenAddr, 
       principleToken.address, 
       user.address, 
       config.tierCeilings, 
@@ -348,7 +347,7 @@ describe('CustomBond-deposit', async function () {
     // deposit
     // payoutTokenContract=Dai(decimals:6), 
     // principleToken=tokenContract(decimals:18)     
-    const payoutTokenContract = new ethers.Contract(payoutTokenAddr, JSON.stringify(ERC20), ethers.provider)
+    const payoutTokenContract = new ethers.Contract(config.payoutTokenAddr, JSON.stringify(ERC20), ethers.provider)
     await payoutTokenContract.connect(deployer).transfer(user.address, utils.parseEther('1.5'), {from: deployer.address});
     const payoutTokenBalanceDeployer = Number(await payoutTokenContract.balanceOf(deployer.address));//2000000000000000000
     const payoutTokenBalanceUser = Number(await payoutTokenContract.balanceOf(user.address));//40000000

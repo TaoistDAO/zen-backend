@@ -17,13 +17,11 @@ const setup = deployments.createFixture(async () => {
         MockTokenContract: <MockToken>await ethers.getContract('MockToken'),
     };
     
-    const payoutTokenAddr = "0xeb8f08a975ab53e34d8a0330e0d34de942c95926";//usdc in rinkeby
-    const daiAddress = "0x5592ec0cfb4dbc12d3ab100b257153436a1f0fea";//Dai in rinkeby
     const [deployer, user] = await ethers.getSigners();
     const principleToken = await contracts.MockTokenContract.deployed();
 
     const tx = await contracts.FactoryContract.connect(user).createBondAndTreasury(
-        payoutTokenAddr, 
+      config.payoutTokenAddr, 
         principleToken.address, 
         user.address, 
         config.tierCeilings, 
@@ -46,7 +44,7 @@ const setup = deployments.createFixture(async () => {
     await BondContract.connect(user).setBondTerms(2, 2000, {from: user.address}) //                 terms.maxDebt
 
     return {
-        ...contracts, deployer, user, payoutTokenAddr, principleToken, TreasuryContract, BondContract
+        ...contracts, deployer, user, principleToken, TreasuryContract, BondContract
     };
 });
 
@@ -57,7 +55,7 @@ const convert = (addr: string) => {
 describe('CustomBond-redeem', async function () {
   it('redeem(user) with lpTokenAsFeeFlag=true', async function () {      
     const {
-      deployer, user, payoutTokenAddr,
+      deployer, user,
       FactoryContract,
       MockTokenContract,
       principleToken, 
@@ -78,7 +76,7 @@ describe('CustomBond-redeem', async function () {
     // principleToken=tokenContract(decimals:18)     
 
     // payoutToken
-    const payoutTokenContract = new ethers.Contract(payoutTokenAddr, JSON.stringify(ERC20), ethers.provider)
+    const payoutTokenContract = new ethers.Contract(config.payoutTokenAddr, JSON.stringify(ERC20), ethers.provider)
     await payoutTokenContract.connect(deployer).transfer(user.address, utils.parseEther('1.5'), {from: deployer.address});
     const payoutTokenBalanceDeployer = Number(await payoutTokenContract.balanceOf(deployer.address));//0.5*10**18
     const payoutTokenBalanceToUser = Number(await payoutTokenContract.balanceOf(user.address));//1500000000040000000, decimal=6
@@ -97,7 +95,7 @@ describe('CustomBond-redeem', async function () {
     // Allow to deposit from user
     await TreasuryContract.connect(user).toggleBondContract(BondContract.address, {from:user.address})
 
-    const amount = utils.parseEther('0.1');
+    const amount = utils.parseEther('0.1');// principleToken amount for deposit
     const maxPrice = 50000;//>= nativePrice(37682)
     
     // Transfer(payoutToken) to TreasuryContract for testing
@@ -156,7 +154,7 @@ describe('CustomBond-redeem', async function () {
 
   it('redeem(user) with lpTokenAsFeeFlag=false', async function () {      
     const {
-      deployer, user, payoutTokenAddr,
+      deployer, user,
       FactoryContract,
       MockTokenContract,
       principleToken, 
@@ -180,7 +178,7 @@ describe('CustomBond-redeem', async function () {
     // principleToken=tokenContract(decimals:18)     
 
     // payoutToken
-    const payoutTokenContract = new ethers.Contract(payoutTokenAddr, JSON.stringify(ERC20), ethers.provider)
+    const payoutTokenContract = new ethers.Contract(config.payoutTokenAddr, JSON.stringify(ERC20), ethers.provider)
     await payoutTokenContract.connect(deployer).transfer(user.address, utils.parseEther('1.5'), {from: deployer.address});
     const payoutTokenBalanceDeployer = Number(await payoutTokenContract.balanceOf(deployer.address));//0.5*10**18
     const payoutTokenBalanceToUser = Number(await payoutTokenContract.balanceOf(user.address));//1500000000040000000, decimal=6

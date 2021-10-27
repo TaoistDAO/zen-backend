@@ -21,13 +21,8 @@ contract FactoryStorage is Ownable {
 
     mapping(address => uint256) public indexOfBond;
 
-<<<<<<< HEAD
     event NewBond(address treasury, address bond, address _initialOwner);
     
-=======
-    event BondCreation(address treasury, address bond, address _initialOwner);
-
->>>>>>> 4c9dab4703eabddb41e8c933030e6db0ff9c1d68
     /* ======== POLICY FUNCTIONS ======== */
 
     /**
@@ -43,7 +38,6 @@ contract FactoryStorage is Ownable {
         @return _bond address
      */
     function pushBond(
-<<<<<<< HEAD
         address _payoutToken, 
         address _principleToken, 
         address _customTreasury, 
@@ -53,17 +47,6 @@ contract FactoryStorage is Ownable {
         uint[] calldata _fees
     ) external returns(address _treasury, address _bond) {
         // require(factory == msg.sender, "Not Factory");
-=======
-        address _payoutToken,
-        address _principleToken,
-        address _customTreasury,
-        address _customBond,
-        address _initialOwner,
-        uint256[] calldata _tierCeilings,
-        uint256[] calldata _fees
-    ) external returns (address _treasury, address _bond) {
-        require(factory == msg.sender, "Not Factory");
->>>>>>> 4c9dab4703eabddb41e8c933030e6db0ff9c1d68
 
         indexOfBond[_customBond] = bondDetails.length;
 
@@ -79,15 +62,9 @@ contract FactoryStorage is Ownable {
             })
         );
 
-<<<<<<< HEAD
         emit NewBond(_customTreasury, _customBond, _initialOwner);
         
         return(_customTreasury, _customBond);
-=======
-        emit BondCreation(_customTreasury, _customBond, _initialOwner);
-
-        return (_customTreasury, _customBond);
->>>>>>> 4c9dab4703eabddb41e8c933030e6db0ff9c1d68
     }
 
     /**
