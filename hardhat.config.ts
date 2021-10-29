@@ -8,6 +8,7 @@ import 'solidity-coverage';
 import "@nomiclabs/hardhat-etherscan"
 // import {node_url, accounts} from './utils/network';
 
+
 const fakeMnemonic = {mnemonic: "test test test test test test test test test test test junk"};
 const mnemonic = process.env.MNEMONIC;
 const etherScan_api_key = process.env.ETHERSCAN_API_KEY;
@@ -42,14 +43,17 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       initialBaseFeePerGas: 0,
-      accounts: fakeMnemonic,
-      // forking: {
-      //   url: node('mainnet'),
-      // },
-      chainId: chainIds.rinkeby,
+      allowUnlimitedContractSize: true,
       forking: {
-        url: node('rinkeby'),
+        url: node('mainnet'),
       },
+      accounts: {mnemonic},
+      // chainId: chainIds.rinkeby,
+      // forking: {
+      //   url: node('rinkeby'),
+      //   enabled: true
+      // },
+      gasPrice: 'auto',
     },
     mainnet: {
       url: node('mainnet'),
@@ -112,6 +116,12 @@ const config: HardhatUserConfig = {
       },
       {
         version: '0.8.0',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 2000,
+          },
+        },
       }
     ],
   },

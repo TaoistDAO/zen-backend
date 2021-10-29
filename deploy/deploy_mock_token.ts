@@ -12,7 +12,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     from: deployer.address,
     args: ["Mock Token", "sTao"],
     log: true,    
-    skipIfAlreadyDeployed: true,
+    // skipIfAlreadyDeployed: true,
     autoMine: true, // speed up deployment on local network (ganache, hardhat), no effect on live networks
   });
 };

@@ -1,8 +1,8 @@
 import {expect} from './chai-setup';
 import {ethers, deployments, getUnnamedAccounts} from 'hardhat';
 import {setupUsers, config, randomAddress} from './utils';
-import {Factory, FactoryStorage, SubsidyRouter} from '../typechain';
-import { MockToken } from '../typechain/MockToken';
+import {Factory, FactoryStorage, SubsidyRouter, MockToken} from '../typechain';
+// import { MockToken } from '../typechain/MockToken';
 import { BigNumber, BigNumberish, utils } from 'ethers';
 const ERC20 = require('./utils/ERC20.json');
 
@@ -20,13 +20,13 @@ const setup = deployments.createFixture(async () => {
     const [deployer, user] = await ethers.getSigners();
     const principleToken = await contracts.MockTokenContract.deployed();
 
+    await contracts.FactoryContract.connect(deployer).setTiersAndFees(config.tierCeilings, config.fees);
+
     const tx = await contracts.FactoryContract.connect(user).createBondAndTreasury(
-      config.payoutTokenAddr, 
-        principleToken.address, 
-        user.address, 
-        config.tierCeilings, 
-        config.fees,
-        {from:user.address}
+      config.usdcAdress, 
+      principleToken.address, 
+      user.address, 
+      {from:user.address}
     )
 
     const TreasuryFactory = await ethers.getContractFactory('CustomTreasury');
@@ -76,7 +76,7 @@ describe('CustomBond-redeem', async function () {
     // principleToken=tokenContract(decimals:18)     
 
     // payoutToken
-    const payoutTokenContract = new ethers.Contract(config.payoutTokenAddr, JSON.stringify(ERC20), ethers.provider)
+    const payoutTokenContract = new ethers.Contract(config.usdcAdress, JSON.stringify(ERC20), ethers.provider)
     await payoutTokenContract.connect(deployer).transfer(user.address, utils.parseEther('1.5'), {from: deployer.address});
     const payoutTokenBalanceDeployer = Number(await payoutTokenContract.balanceOf(deployer.address));//0.5*10**18
     const payoutTokenBalanceToUser = Number(await payoutTokenContract.balanceOf(user.address));//1500000000040000000, decimal=6
@@ -110,7 +110,6 @@ describe('CustomBond-redeem', async function () {
     const deposit = Number(BigNumber.from(bondCreatedEvent.deposit))//100000000000000000
     const payout = Number(BigNumber.from(bondCreatedEvent.payout)) //27203482
     const expires = Number(BigNumber.from(bondCreatedEvent.expires))//9573882
-    console.log("===tx bondCreatedEvent::", deposit, payout, expires);
     expect(Number(amount)).to.equal(deposit);
 
     const blockNum = await ethers.provider.getBlockNumber()
@@ -118,9 +117,8 @@ describe('CustomBond-redeem', async function () {
     expect(Number(expiresSol)).to.equal(expires);
     
     const bondPriceChangedEvent = events[8].args;
-    const internalPrice = Number(BigNumber.from(bondPriceChangedEvent.internalPrice))
-    const debtRatio = Number(BigNumber.from(bondPriceChangedEvent.debtRatio))
-    console.log("===tx bondPriceChangedEvent::", internalPrice, debtRatio);//36760 0
+    const internalPrice = Number(BigNumber.from(bondPriceChangedEvent.internalPrice))//36760 
+    const debtRatio = Number(BigNumber.from(bondPriceChangedEvent.debtRatio))//0
 
     const debtRatioSol = await BondContract.connect(user).debtRatio({from:user.address});
     expect(Number(debtRatioSol)).to.equal(debtRatio)
@@ -141,10 +139,6 @@ describe('CustomBond-redeem', async function () {
     const recipient = events[0].args.recipient;
     const payoutRedeem = events[0].args.payout;
     const remaining = events[0].args.remaining;
-    console.log("===tx-redeem::", 
-    recipient, 
-    Number(BigNumber.from(payoutRedeem)), 
-    Number(BigNumber.from(remaining)));
     
     const payoutTokenBalanceToUserAfterRedeem = Number(await payoutTokenContract.balanceOf(user.address));//500000000067203460
     const calcPayoutTokenBalanceToUser = payoutTokenBalanceToUser1.sub(transferAmount).add(payoutRedeem);
@@ -178,7 +172,7 @@ describe('CustomBond-redeem', async function () {
     // principleToken=tokenContract(decimals:18)     
 
     // payoutToken
-    const payoutTokenContract = new ethers.Contract(config.payoutTokenAddr, JSON.stringify(ERC20), ethers.provider)
+    const payoutTokenContract = new ethers.Contract(config.usdcAdress, JSON.stringify(ERC20), ethers.provider)
     await payoutTokenContract.connect(deployer).transfer(user.address, utils.parseEther('1.5'), {from: deployer.address});
     const payoutTokenBalanceDeployer = Number(await payoutTokenContract.balanceOf(deployer.address));//0.5*10**18
     const payoutTokenBalanceToUser = Number(await payoutTokenContract.balanceOf(user.address));//1500000000040000000, decimal=6
@@ -212,7 +206,6 @@ describe('CustomBond-redeem', async function () {
     const deposit = Number(BigNumber.from(bondCreatedEvent.deposit))//100000000000000000
     const payout = Number(BigNumber.from(bondCreatedEvent.payout)) //27203482
     const expires = Number(BigNumber.from(bondCreatedEvent.expires))//9573882
-    console.log("===tx bondCreatedEvent::", deposit, payout, expires);
     expect(Number(amount)).to.equal(deposit);
 
     const blockNum = await ethers.provider.getBlockNumber()
@@ -220,9 +213,8 @@ describe('CustomBond-redeem', async function () {
     expect(Number(expiresSol)).to.equal(expires);
     
     const bondPriceChangedEvent = events[8].args;
-    const internalPrice = Number(BigNumber.from(bondPriceChangedEvent.internalPrice))
-    const debtRatio = Number(BigNumber.from(bondPriceChangedEvent.debtRatio))
-    console.log("===tx bondPriceChangedEvent::", internalPrice, debtRatio);//36760 0
+    const internalPrice = Number(BigNumber.from(bondPriceChangedEvent.internalPrice))//36760 
+    const debtRatio = Number(BigNumber.from(bondPriceChangedEvent.debtRatio))//0
 
     const debtRatioSol = await BondContract.connect(user).debtRatio({from:user.address});
     expect(Number(debtRatioSol)).to.equal(debtRatio)
@@ -243,10 +235,6 @@ describe('CustomBond-redeem', async function () {
     const recipient = events[0].args.recipient;
     const payoutRedeem = events[0].args.payout;
     const remaining = events[0].args.remaining;
-    console.log("===tx-redeem::", 
-    recipient, 
-    Number(BigNumber.from(payoutRedeem)), 
-    Number(BigNumber.from(remaining)));
     
     const payoutTokenBalanceToUserAfterRedeem = Number(await payoutTokenContract.balanceOf(user.address));//500000000067203460
     const calcPayoutTokenBalanceToUser = payoutTokenBalanceToUser1.sub(transferAmount).add(payoutRedeem);
