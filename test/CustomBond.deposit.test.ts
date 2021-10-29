@@ -2,8 +2,7 @@ import {expect} from './chai-setup';
 import {ethers, deployments} from 'hardhat';
 import {setupUsers, config, randomAddress} from './utils';
 import {Factory, FactoryStorage, Helper, SubsidyRouter, MockToken} from '../typechain';
-// import { MockToken } from '../typechain/MockToken';
-import { BigNumber, BigNumberish, utils } from 'ethers';
+import { BigNumber, utils } from 'ethers';
 const ERC20 = require('./utils/ERC20.json');
 
 // TEST : Rinkeby testnet
@@ -127,198 +126,199 @@ describe('CustomBond', async function () {
 });
 
 describe('CustomBond-deposit with principleToken', async function () {
-  it('deposit(deployer)', async function () {      
-    const {
-      deployer, user,
-      FactoryContract,
-      MockTokenContract
-    } = await setup();
+  // it('deposit(deployer)', async function () {      
+  //   const {
+  //     deployer, user,
+  //     FactoryContract,
+  //     MockTokenContract
+  //   } = await setup();
 
-    // deployer=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 
-    // user=0x70997970C51812dc3A010C7d01b50e0d17dc79
-    // const myBalance = await ethers.provider.getBalance(deployer.address)
+  //   // deployer=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 
+  //   // user=0x70997970C51812dc3A010C7d01b50e0d17dc79
+  //   // const myBalance = await ethers.provider.getBalance(deployer.address)
 
-    const principleToken = await MockTokenContract.deployed();
+  //   const principleToken = await MockTokenContract.deployed();
 
-    await FactoryContract.connect(deployer).setTiersAndFees(config.tierCeilings, config.fees);
+  //   await FactoryContract.connect(deployer).setTiersAndFees(config.tierCeilings, config.fees);
 
-    const tx = await FactoryContract.createBondAndTreasury(
-      config.usdcAdress, 
-      principleToken.address, 
-      deployer.address, 
-    )
+  //   const tx = await FactoryContract.connect(deployer).createBondAndTreasury(
+  //     config.usdcAdress, 
+  //     principleToken.address, 
+  //     deployer.address, 
+  //     {from: deployer.address}
+  //   )
 
-    const TreasuryFactory = await ethers.getContractFactory('CustomTreasury');
-    const BondFactory = await ethers.getContractFactory('CustomBond');
+  //   const TreasuryFactory = await ethers.getContractFactory('CustomTreasury');
+  //   const BondFactory = await ethers.getContractFactory('CustomBond');
 
-    let events: any = [];
-    events = (await tx.wait()).events; 
-    const customTreasuryAddr = events[0].args.treasury;
-    const customBondAddr = events[0].args.bond;
-    const TreasuryContract = TreasuryFactory.attach(customTreasuryAddr);
-    const BondContract = BondFactory.attach(customBondAddr);
+  //   let events: any = [];
+  //   events = (await tx.wait()).events; 
+  //   const customTreasuryAddr = events[0].args.treasury;
+  //   const customBondAddr = events[0].args.bond;
+  //   const TreasuryContract = TreasuryFactory.attach(customTreasuryAddr);
+  //   const BondContract = BondFactory.attach(customBondAddr);
 
-    // Policy(deployer) set bond terms    
-    await BondContract.setBondTerms(0, 20000)//_input >= 10000, terms.vestingTerm
-    await BondContract.setBondTerms(1, 150)  //_input <= 1000,  terms.maxPayout
-    await BondContract.setBondTerms(2, 2000) //                 terms.maxDebt
+  //   // Policy(deployer) set bond terms    
+  //   await BondContract.connect(deployer).setBondTerms(0, 20000, {from: deployer.address})//_input >= 10000, terms.vestingTerm
+  //   await BondContract.connect(deployer).setBondTerms(1, 150, {from: deployer.address})  //_input <= 1000,  terms.maxPayout
+  //   await BondContract.connect(deployer).setBondTerms(2, 2000, {from: deployer.address}) //                 terms.maxDebt
 
-    // Policy(deployer) initialization bond
-    const controlVariable = 1000;
-    const vestingTerm = 25000;
-    const minimumPrice = 600;
-    const maxPayout = 200;
-    const maxDebt = 1000;
-    const initialDebt = 100;
-    await BondContract.initializeBond(controlVariable, vestingTerm, minimumPrice, maxPayout, maxDebt, initialDebt)
+  //   // Policy(deployer) initialization bond
+  //   const controlVariable = 1000;
+  //   const vestingTerm = 25000;
+  //   const minimumPrice = 600;
+  //   const maxPayout = 200;
+  //   const maxDebt = 1000;
+  //   const initialDebt = 100;
+  //   await BondContract.connect(deployer).initializeBond(controlVariable, vestingTerm, minimumPrice, maxPayout, maxDebt, initialDebt, {from: deployer.address})
 
-    // set adjustment
-    const addition = true;
-    const increment = 10;
-    const target = 2000;
-    const buffer = 100;
-    await BondContract.setAdjustment(addition,  increment, target, buffer)
+  //   // set adjustment
+  //   const addition = true;
+  //   const increment = 10;
+  //   const target = 2000;
+  //   const buffer = 100;
+  //   await BondContract.connect(deployer).setAdjustment(addition,  increment, target, buffer, {from: deployer.address})
     
-    // deposit     
-    const tokenContract = new ethers.Contract(principleToken.address, JSON.stringify(ERC20), ethers.provider)
-    const payoutTokenContract = new ethers.Contract(config.usdcAdress, JSON.stringify(ERC20), ethers.provider)
-    const daiBalance = Number(await payoutTokenContract.balanceOf(deployer.address));//2000000000000000000
+  //   // deposit     
+  //   const tokenContract = new ethers.Contract(principleToken.address, JSON.stringify(ERC20), ethers.provider)
+  //   const payoutTokenContract = new ethers.Contract(config.usdcAdress, JSON.stringify(ERC20), ethers.provider)
+  //   const daiBalance = Number(await payoutTokenContract.balanceOf(deployer.address));//2000000000000000000
     
-    //Approve(principleToken) to deposit in frontend(user)
-    const tokenSupply = await tokenContract.totalSupply();//1e+26
-    await tokenContract.connect(deployer).approve(BondContract.address, tokenSupply, {from: deployer.address});
+  //   //Approve(principleToken) to deposit in frontend(user)
+  //   const tokenSupply = await tokenContract.totalSupply();//1e+26
+  //   await tokenContract.connect(deployer).approve(BondContract.address, tokenSupply, {from: deployer.address});
     
-    // Policy(deployer) allow to deposit from user
-    await TreasuryContract.toggleBondContract(BondContract.address)
+  //   // Policy(deployer) allow to deposit from user
+  //   await TreasuryContract.connect(deployer).toggleBondContract(BondContract.address, {from: deployer.address})
 
-    const amount = utils.parseEther('2');
-    const maxPrice = 5000;
+  //   const amount = utils.parseEther('2');
+  //   const maxPrice = 5000;
 
-    // Transfer(payoutToken) to TreasuryContract for testing
-    const transferAmount = utils.parseUnits('1', await tokenContract.decimals());//33333333333
-    await payoutTokenContract.connect(deployer).transfer(TreasuryContract.address, transferAmount, {from: deployer.address});
+  //   // Transfer(payoutToken) to TreasuryContract for testing
+  //   const transferAmount = utils.parseUnits('1', await tokenContract.decimals());//33333333333
+  //   await payoutTokenContract.connect(deployer).transfer(TreasuryContract.address, transferAmount, {from: deployer.address});
    
-    const txd = await BondContract.connect(deployer).deposit(amount, maxPrice, user.address, {from:deployer.address});
-    events = (await txd.wait()).events;      
-    console.log("====events::", events)
-    const bondCreatedEvent = events[7].args;
-    const deposit = Number(BigNumber.from(bondCreatedEvent.deposit))
-    const payout = Number(BigNumber.from(bondCreatedEvent.payout))
-    const expires = Number(BigNumber.from(bondCreatedEvent.expires))
-    expect(Number(amount)).to.equal(deposit);
+  //   const txd = await BondContract.connect(deployer).deposit(amount, maxPrice, user.address, {from:deployer.address});
+  //   events = (await txd.wait()).events;      
+  //   console.log("====events::", events)
+  //   const bondCreatedEvent = events[7].args;
+  //   const deposit = Number(BigNumber.from(bondCreatedEvent.deposit))
+  //   const payout = Number(BigNumber.from(bondCreatedEvent.payout))
+  //   const expires = Number(BigNumber.from(bondCreatedEvent.expires))
+  //   expect(Number(amount)).to.equal(deposit);
 
-    const blockNum = await ethers.provider.getBlockNumber()
-    const expiresSol = BigNumber.from(blockNum).add(vestingTerm);
-    expect(Number(expiresSol)).to.equal(expires);
+  //   const blockNum = await ethers.provider.getBlockNumber()
+  //   const expiresSol = BigNumber.from(blockNum).add(vestingTerm);
+  //   expect(Number(expiresSol)).to.equal(expires);
     
-    const bondPriceChangedEvent = events[8].args;
-    const internalPrice = Number(BigNumber.from(bondPriceChangedEvent.internalPrice))
-    const debtRatio = Number(BigNumber.from(bondPriceChangedEvent.debtRatio))
+  //   const bondPriceChangedEvent = events[8].args;
+  //   const internalPrice = Number(BigNumber.from(bondPriceChangedEvent.internalPrice))
+  //   const debtRatio = Number(BigNumber.from(bondPriceChangedEvent.debtRatio))
 
-    const debtRatioSol = await BondContract.connect(deployer).debtRatio({from:deployer.address});
-    expect(Number(debtRatioSol)).to.equal(debtRatio)
+  //   const debtRatioSol = await BondContract.connect(deployer).debtRatio({from:deployer.address});
+  //   expect(Number(debtRatioSol)).to.equal(debtRatio)
 
-    // debtRatio=0 so that price = terms.minimumPrice;
-    const priceSol = minimumPrice;
-    expect(Number(priceSol)).to.equal(internalPrice)
-  });
+  //   // debtRatio=0 so that price = terms.minimumPrice;
+  //   const priceSol = minimumPrice;
+  //   expect(Number(priceSol)).to.equal(internalPrice)
+  // });
 
-  it('deposit(user)', async function () {      
-    const {
-      deployer, user,
-      FactoryContract,
-      MockTokenContract
-    } = await setup();
+  // it('deposit(user)', async function () {      
+  //   const {
+  //     deployer, user,
+  //     FactoryContract,
+  //     MockTokenContract
+  //   } = await setup();
 
-    // deployer=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 
-    // user=0x70997970C51812dc3A010C7d01b50e0d17dc79
-    // const myBalance = await ethers.provider.getBalance(deployer.address)
+  //   // deployer=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 
+  //   // user=0x70997970C51812dc3A010C7d01b50e0d17dc79
+  //   // const myBalance = await ethers.provider.getBalance(deployer.address)
 
-    const principleToken = await MockTokenContract.deployed();
+  //   const principleToken = await MockTokenContract.deployed();
 
-    await FactoryContract.connect(deployer).setTiersAndFees(config.tierCeilings, config.fees);
+  //   await FactoryContract.connect(deployer).setTiersAndFees(config.tierCeilings, config.fees);
 
-    const tx = await FactoryContract.connect(user).createBondAndTreasury(
-      config.usdcAdress, 
-      principleToken.address, 
-      user.address, 
-      {from:user.address}
-    )
+  //   const tx = await FactoryContract.connect(user).createBondAndTreasury(
+  //     config.usdcAdress, 
+  //     principleToken.address, 
+  //     user.address, 
+  //     {from:user.address}
+  //   )
 
-    const TreasuryFactory = await ethers.getContractFactory('CustomTreasury');
-    const BondFactory = await ethers.getContractFactory('CustomBond');
-    let events: any = [];
-    events = (await tx.wait()).events;    
-    const customTreasuryAddr = events[0].args.treasury;
-    const customBondAddr = events[0].args.bond;
-    const TreasuryContract = TreasuryFactory.attach(customTreasuryAddr);
-    const BondContract = BondFactory.attach(customBondAddr);
+  //   const TreasuryFactory = await ethers.getContractFactory('CustomTreasury');
+  //   const BondFactory = await ethers.getContractFactory('CustomBond');
+  //   let events: any = [];
+  //   events = (await tx.wait()).events;    
+  //   const customTreasuryAddr = events[0].args.treasury;
+  //   const customBondAddr = events[0].args.bond;
+  //   const TreasuryContract = TreasuryFactory.attach(customTreasuryAddr);
+  //   const BondContract = BondFactory.attach(customBondAddr);
 
-    // set bond terms
-    await BondContract.connect(user).setBondTerms(0, 20000, {from: user.address})//_input >= 10000, terms.vestingTerm
-    await BondContract.connect(user).setBondTerms(1, 150, {from: user.address})  //_input <= 1000,  terms.maxPayout
-    await BondContract.connect(user).setBondTerms(2, 2000, {from: user.address}) //                 terms.maxDebt
+  //   // set bond terms
+  //   await BondContract.connect(user).setBondTerms(0, 20000, {from: user.address})//_input >= 10000, terms.vestingTerm
+  //   await BondContract.connect(user).setBondTerms(1, 150, {from: user.address})  //_input <= 1000,  terms.maxPayout
+  //   await BondContract.connect(user).setBondTerms(2, 2000, {from: user.address}) //                 terms.maxDebt
 
-    // initialization bond
-    const controlVariable = BigNumber.from(825000);
-    const vestingTerm = BigNumber.from(46200);
-    const minimumPrice = BigNumber.from(36760);
-    const maxPayout = BigNumber.from(4);
-    const maxDebt = utils.parseEther('1250');
-    const initialDebt = utils.parseEther('400')
-    await BondContract.connect(user).initializeBond(controlVariable, vestingTerm, minimumPrice, maxPayout, maxDebt, initialDebt, {from:user.address})
+  //   // initialization bond
+  //   const controlVariable = BigNumber.from(825000);
+  //   const vestingTerm = BigNumber.from(46200);
+  //   const minimumPrice = BigNumber.from(36760);
+  //   const maxPayout = BigNumber.from(4);
+  //   const maxDebt = utils.parseEther('1250');
+  //   const initialDebt = utils.parseEther('400')
+  //   await BondContract.connect(user).initializeBond(controlVariable, vestingTerm, minimumPrice, maxPayout, maxDebt, initialDebt, {from:user.address})
     
-    // deposit
-    // payoutTokenContract=Dai(decimals:6), 
-    // principleToken=tokenContract(decimals:18)     
-    const payoutTokenContract = new ethers.Contract(config.usdcAdress, JSON.stringify(ERC20), ethers.provider)
-    await payoutTokenContract.connect(deployer).transfer(user.address, utils.parseEther('1.5'), {from: deployer.address});
-    const payoutTokenBalanceDeployer = Number(await payoutTokenContract.balanceOf(deployer.address));//2000000000000000000
-    const payoutTokenBalanceUser = Number(await payoutTokenContract.balanceOf(user.address));//40000000
+  //   // deposit
+  //   // payoutTokenContract=Dai(decimals:6), 
+  //   // principleToken=tokenContract(decimals:18)     
+  //   const payoutTokenContract = new ethers.Contract(config.usdcAdress, JSON.stringify(ERC20), ethers.provider)
+  //   await payoutTokenContract.connect(deployer).transfer(user.address, utils.parseEther('1.5'), {from: deployer.address});
+  //   const payoutTokenBalanceDeployer = Number(await payoutTokenContract.balanceOf(deployer.address));//2000000000000000000
+  //   const payoutTokenBalanceUser = Number(await payoutTokenContract.balanceOf(user.address));//40000000
     
-    const tokenContract = new ethers.Contract(principleToken.address, JSON.stringify(ERC20), ethers.provider)
-    await tokenContract.connect(deployer).transfer(user.address, utils.parseEther('20'), {from: deployer.address});
-    const tokenBalanceDeployer = Number(await tokenContract.balanceOf(deployer.address));//2000000000000000000
-    const tokenBalanceUser = Number(await tokenContract.balanceOf(user.address));//4000000000000000000
+  //   const tokenContract = new ethers.Contract(principleToken.address, JSON.stringify(ERC20), ethers.provider)
+  //   await tokenContract.connect(deployer).transfer(user.address, utils.parseEther('20'), {from: deployer.address});
+  //   const tokenBalanceDeployer = Number(await tokenContract.balanceOf(deployer.address));//2000000000000000000
+  //   const tokenBalanceUser = Number(await tokenContract.balanceOf(user.address));//4000000000000000000
             
-    //Approve(principleToken) to deposit in frontend(user)
-    const tokenSupply = await tokenContract.totalSupply();//1e+26
-    await tokenContract.connect(user).approve(BondContract.address, tokenSupply, {from: user.address});
+  //   //Approve(principleToken) to deposit in frontend(user)
+  //   const tokenSupply = await tokenContract.totalSupply();//1e+26
+  //   await tokenContract.connect(user).approve(BondContract.address, tokenSupply, {from: user.address});
     
-    // Allow to deposit from user
-    await TreasuryContract.connect(user).toggleBondContract(BondContract.address, {from:user.address})
+  //   // Allow to deposit from user
+  //   await TreasuryContract.connect(user).toggleBondContract(BondContract.address, {from:user.address})
 
-    const amount = utils.parseEther('0.1');
-    const maxPrice = 50000;//>= nativePrice(37682)
+  //   const amount = utils.parseEther('0.1');
+  //   const maxPrice = 50000;//>= nativePrice(37682)
     
-    // Transfer(payoutToken) to TreasuryContract for testing
-    const transferAmount = utils.parseEther('1');//= 1 eth
-    await payoutTokenContract.connect(user).transfer(TreasuryContract.address, transferAmount, {from: user.address});
+  //   // Transfer(payoutToken) to TreasuryContract for testing
+  //   const transferAmount = utils.parseEther('1');//= 1 eth
+  //   await payoutTokenContract.connect(user).transfer(TreasuryContract.address, transferAmount, {from: user.address});
 
-    const txd = await BondContract.connect(user).deposit(amount, maxPrice, user.address, {from:user.address});
-    events = (await txd.wait()).events;   
+  //   const txd = await BondContract.connect(user).deposit(amount, maxPrice, user.address, {from:user.address});
+  //   events = (await txd.wait()).events;   
 
-    const bondCreatedEvent = events[7].args;
-    const deposit = Number(BigNumber.from(bondCreatedEvent.deposit))
-    const payout = Number(BigNumber.from(bondCreatedEvent.payout))
-    const expires = Number(BigNumber.from(bondCreatedEvent.expires))
-    expect(Number(amount)).to.equal(deposit);
+  //   const bondCreatedEvent = events[7].args;
+  //   const deposit = Number(BigNumber.from(bondCreatedEvent.deposit))
+  //   const payout = Number(BigNumber.from(bondCreatedEvent.payout))
+  //   const expires = Number(BigNumber.from(bondCreatedEvent.expires))
+  //   expect(Number(amount)).to.equal(deposit);
 
-    const blockNum = await ethers.provider.getBlockNumber()
-    const expiresSol = BigNumber.from(blockNum).add(vestingTerm);
-    expect(Number(expiresSol)).to.equal(expires);
+  //   const blockNum = await ethers.provider.getBlockNumber()
+  //   const expiresSol = BigNumber.from(blockNum).add(vestingTerm);
+  //   expect(Number(expiresSol)).to.equal(expires);
     
-    const bondPriceChangedEvent = events[8].args;
-    const internalPrice = Number(BigNumber.from(bondPriceChangedEvent.internalPrice))
-    const debtRatio = Number(BigNumber.from(bondPriceChangedEvent.debtRatio))
+  //   const bondPriceChangedEvent = events[8].args;
+  //   const internalPrice = Number(BigNumber.from(bondPriceChangedEvent.internalPrice))
+  //   const debtRatio = Number(BigNumber.from(bondPriceChangedEvent.debtRatio))
 
-    const debtRatioSol = await BondContract.connect(deployer).debtRatio({from:deployer.address});
-    expect(Number(debtRatioSol)).to.equal(debtRatio)
+  //   const debtRatioSol = await BondContract.connect(deployer).debtRatio({from:deployer.address});
+  //   expect(Number(debtRatioSol)).to.equal(debtRatio)
 
-    // debtRatio=0 so that price = terms.minimumPrice;
-    const priceSol = minimumPrice;
-    expect(Number(priceSol)).to.equal(internalPrice)
-  });
+  //   // debtRatio=0 so that price = terms.minimumPrice;
+  //   const priceSol = minimumPrice;
+  //   expect(Number(priceSol)).to.equal(internalPrice)
+  // });
 });
 
 describe('CustomBond-deposit with one Asset', async function () {
@@ -388,18 +388,17 @@ describe('CustomBond-deposit with one Asset', async function () {
     console.log("====depositAmount::", Number(depositAmount))
     const txd = await BondContract.connect(user).depositWithAsset(
       depositAmount, 
-      maxPrice, 
       config.daiAddress,
       user.address, 
       {from:user.address}
     );
     events = (await txd.wait()).events; 
-    const bondCreatedEvent = events[19].args;
+    const bondCreatedEvent = events[20].args;
     const deposit = Number(BigNumber.from(bondCreatedEvent.deposit))
     const payout = Number(BigNumber.from(bondCreatedEvent.payout))
     const expires = Number(BigNumber.from(bondCreatedEvent.expires))
     
-    const lpEvent = events[14].args;
+    const lpEvent = events[15].args;
     const lpAddress = lpEvent.lpAddress;
     const lpAmount = Number(BigNumber.from(lpEvent.lpAmount))
     expect(lpAmount).to.equal(deposit);
@@ -408,7 +407,7 @@ describe('CustomBond-deposit with one Asset', async function () {
     const expiresSol = BigNumber.from(blockNum).add(vestingTerm);
     expect(Number(expiresSol)).to.equal(expires);
     
-    const bondPriceChangedEvent = events[20].args;
+    const bondPriceChangedEvent = events[21].args;
     const internalPrice = Number(BigNumber.from(bondPriceChangedEvent.internalPrice))
     const debtRatio = Number(BigNumber.from(bondPriceChangedEvent.debtRatio))
     console.log("===tx bondPriceChangedEvent::", internalPrice, debtRatio);
@@ -481,18 +480,17 @@ describe('CustomBond-deposit with one Asset', async function () {
     console.log("====depositAmount::", Number(depositAmount))
     const txd = await BondContract.connect(user).depositWithAsset(
       depositAmount, 
-      maxPrice, 
       config.daiAddress,
       user.address, 
       {from:user.address}
     );
     events = (await txd.wait()).events; 
-    const bondCreatedEvent = events[19].args;
+    const bondCreatedEvent = events[20].args;
     const deposit = Number(BigNumber.from(bondCreatedEvent.deposit))
     const payout = Number(BigNumber.from(bondCreatedEvent.payout))
     const expires = Number(BigNumber.from(bondCreatedEvent.expires))
     
-    const lpEvent = events[14].args;
+    const lpEvent = events[15].args;
     const lpAddress = lpEvent.lpAddress;
     const lpAmount = Number(BigNumber.from(lpEvent.lpAmount))
     expect(lpAmount).to.equal(deposit);
@@ -501,7 +499,7 @@ describe('CustomBond-deposit with one Asset', async function () {
     const expiresSol = BigNumber.from(blockNum).add(vestingTerm);
     expect(Number(expiresSol)).to.equal(expires);
     
-    const bondPriceChangedEvent = events[20].args;
+    const bondPriceChangedEvent = events[21].args;
     const internalPrice = Number(BigNumber.from(bondPriceChangedEvent.internalPrice))
     const debtRatio = Number(BigNumber.from(bondPriceChangedEvent.debtRatio))
     console.log("===tx bondPriceChangedEvent::", internalPrice, debtRatio);
@@ -516,94 +514,98 @@ describe('CustomBond-deposit with one Asset', async function () {
 });
 
 describe('CustomBond-deposit with one Asset WETH', async function () {
-  // it('deposit(user) with one Asset - WETH', async function () {      
-  //   const {
-  //     deployer, user,
-  //     FactoryContract,
-  //   } = await setup();
+  it('deposit(user) with one Asset - WETH', async function () {      
+    const {
+      deployer, user,
+      FactoryContract,
+    } = await setup();
 
-  //   await FactoryContract.connect(deployer).setTiersAndFees(config.tierCeilings, config.fees);
+    await FactoryContract.connect(deployer).setTiersAndFees(config.tierCeilings, config.fees);
 
-  //   const tx = await FactoryContract.connect(user).createBondAndTreasury(
-  //     config.weth, 
-  //     config.usdcAdress,
-  //     user.address, 
-  //     {from:user.address}
-  //   )
+    const tx = await FactoryContract.connect(user).createBondAndTreasury(
+      config.weth, 
+      config.usdcAdress,
+      user.address, 
+      {from:user.address}
+    )
 
-  //   const TreasuryFactory = await ethers.getContractFactory('CustomTreasury');
-  //   const BondFactory = await ethers.getContractFactory('CustomBond');
-  //   let events: any = [];
-  //   events = (await tx.wait()).events;    
-  //   const customTreasuryAddr = events[0].args.treasury;
-  //   const customBondAddr = events[0].args.bond;
-  //   const TreasuryContract = TreasuryFactory.attach(customTreasuryAddr);
-  //   const BondContract = BondFactory.attach(customBondAddr);
+    const TreasuryFactory = await ethers.getContractFactory('CustomTreasury');
+    const BondFactory = await ethers.getContractFactory('CustomBond');
+    let events: any = [];
+    events = (await tx.wait()).events;    
+    const customTreasuryAddr = events[0].args.treasury;
+    const customBondAddr = events[0].args.bond;
+    const TreasuryContract = TreasuryFactory.attach(customTreasuryAddr);
+    const BondContract = BondFactory.attach(customBondAddr);
 
-  //   // set bond terms
-  //   await BondContract.connect(user).setBondTerms(0, 20000, {from: user.address})//_input >= 10000, terms.vestingTerm
-  //   await BondContract.connect(user).setBondTerms(1, 150, {from: user.address})  //_input <= 1000,  terms.maxPayout
-  //   await BondContract.connect(user).setBondTerms(2, 2000, {from: user.address}) //                 terms.maxDebt
+    // set bond terms
+    await BondContract.connect(user).setBondTerms(0, 20000, {from: user.address})//_input >= 10000, terms.vestingTerm
+    await BondContract.connect(user).setBondTerms(1, 150, {from: user.address})  //_input <= 1000,  terms.maxPayout
+    await BondContract.connect(user).setBondTerms(2, 2000, {from: user.address}) //                 terms.maxDebt
 
-  //   // initialization bond
-  //   const controlVariable = BigNumber.from(825000);
-  //   const vestingTerm = BigNumber.from(46200);
-  //   const minimumPrice = BigNumber.from(36760);
-  //   const maxPayout = BigNumber.from(4);
-  //   const maxDebt = utils.parseEther('1250');
-  //   const initialDebt = utils.parseEther('400')
-  //   await BondContract.connect(user).initializeBond(controlVariable, vestingTerm, minimumPrice, maxPayout, maxDebt, initialDebt, {from:user.address})
+    // initialization bond
+    const controlVariable = BigNumber.from(825000);
+    const vestingTerm = BigNumber.from(46200);
+    const minimumPrice = BigNumber.from(36760);
+    const maxPayout = BigNumber.from(4);
+    const maxDebt = utils.parseEther('1250');
+    const initialDebt = utils.parseEther('400')
+    await BondContract.connect(user).initializeBond(controlVariable, vestingTerm, minimumPrice, maxPayout, maxDebt, initialDebt, {from:user.address})
 
-  //   const payoutTokenContract = new ethers.Contract(config.weth, JSON.stringify(ERC20), ethers.provider)
-  //   await payoutTokenContract.connect(deployer).transfer(user.address, utils.parseEther('0.5'), {from: deployer.address});
+    const payoutTokenContract = new ethers.Contract(config.weth, JSON.stringify(ERC20), ethers.provider)
+    await payoutTokenContract.connect(deployer).transfer(user.address, utils.parseEther('1'), {from: deployer.address});
     
-  //   //Approve(payoutToken) to deposit in frontend(user)
-  //   const supply = await payoutTokenContract.totalSupply();//1e+26
-  //   await payoutTokenContract.connect(user).approve(BondContract.address, supply, {from: user.address});
+    //Approve(payoutToken) to deposit in frontend(user)
+    const supply = await payoutTokenContract.totalSupply();//1e+26
+    await payoutTokenContract.connect(user).approve(BondContract.address, supply, {from: user.address});
     
-  //   // Allow to deposit from user
-  //   await TreasuryContract.connect(user).toggleBondContract(BondContract.address, {from:user.address})
+    // Allow to deposit from user
+    await TreasuryContract.connect(user).toggleBondContract(BondContract.address, {from:user.address})
     
-  //   // Transfer(payoutToken) to TreasuryContract for testing
-  //   const transferAmount = utils.parseEther('0.2');//= 0.2 eth
-  //   await payoutTokenContract.connect(user).transfer(TreasuryContract.address, transferAmount, {from: user.address});
+    // Transfer(payoutToken) to TreasuryContract for testing
+    const transferAmount = utils.parseEther('0.2');//= 0.2 eth
+    await payoutTokenContract.connect(user).transfer(TreasuryContract.address, transferAmount, {from: user.address});
 
-  //   const depositAmount = utils.parseEther('0.2');//payoutToken(WETH)
-  //   const maxPrice = 50000;//>= nativePrice(37682)
-  //   console.log("====depositAmount::", Number(depositAmount))
-  //   const txd = await BondContract.connect(user).depositWithAsset(
-  //     depositAmount, 
-  //     maxPrice, 
-  //     config.usdcAdress,
-  //     user.address, 
-  //     {from:user.address}
-  //   );
-  //   events = (await txd.wait()).events; 
-  //   const bondCreatedEvent = events[19].args;
-  //   const deposit = Number(BigNumber.from(bondCreatedEvent.deposit))
-  //   const payout = Number(BigNumber.from(bondCreatedEvent.payout))
-  //   const expires = Number(BigNumber.from(bondCreatedEvent.expires))
+    const depositAmount = utils.parseEther('0.5');//payoutToken(WETH)
+    const maxPrice = 50000;//>= nativePrice(37682)
+    console.log("====depositAmount::", Number(depositAmount))
+
+    expect(
+      await BondContract.connect(user).depositWithAsset(
+        depositAmount, 
+        config.usdcAdress,
+        user.address, 
+        {from:user.address}
+      )
+    ).to.be.revertedWith('Bond too small');
     
-  //   const lpEvent = events[14].args;
-  //   const lpAddress = lpEvent.lpAddress;
-  //   const lpAmount = Number(BigNumber.from(lpEvent.lpAmount))
-  //   expect(lpAmount).to.equal(deposit);
-
-  //   const blockNum = await ethers.provider.getBlockNumber()
-  //   const expiresSol = BigNumber.from(blockNum).add(vestingTerm);
-  //   expect(Number(expiresSol)).to.equal(expires);
     
-  //   const bondPriceChangedEvent = events[20].args;
-  //   const internalPrice = Number(BigNumber.from(bondPriceChangedEvent.internalPrice))
-  //   const debtRatio = Number(BigNumber.from(bondPriceChangedEvent.debtRatio))
-  //   console.log("===tx bondPriceChangedEvent::", internalPrice, debtRatio);
+    // events = (await txd.wait()).events; 
+    // const bondCreatedEvent = events[20].args;
+    // const deposit = Number(BigNumber.from(bondCreatedEvent.deposit))
+    // const payout = Number(BigNumber.from(bondCreatedEvent.payout))
+    // const expires = Number(BigNumber.from(bondCreatedEvent.expires))
+    
+    // const lpEvent = events[15].args;
+    // const lpAddress = lpEvent.lpAddress;
+    // const lpAmount = Number(BigNumber.from(lpEvent.lpAmount))
+    // expect(lpAmount).to.equal(deposit);
 
-  //   const debtRatioSol = await BondContract.connect(deployer).debtRatio({from:deployer.address});
-  //   expect(Number(debtRatioSol)).to.equal(debtRatio)
+    // const blockNum = await ethers.provider.getBlockNumber()
+    // const expiresSol = BigNumber.from(blockNum).add(vestingTerm);
+    // expect(Number(expiresSol)).to.equal(expires);
+    
+    // const bondPriceChangedEvent = events[21].args;
+    // const internalPrice = Number(BigNumber.from(bondPriceChangedEvent.internalPrice))
+    // const debtRatio = Number(BigNumber.from(bondPriceChangedEvent.debtRatio))
+    // console.log("===tx bondPriceChangedEvent::", internalPrice, debtRatio);
 
-  //   // debtRatio=0 so that price = terms.minimumPrice;
-  //   const priceSol = minimumPrice;
-  //   expect(Number(priceSol)).to.equal(internalPrice)
-  // });
+    // const debtRatioSol = await BondContract.connect(deployer).debtRatio({from:deployer.address});
+    // expect(Number(debtRatioSol)).to.equal(debtRatio)
+
+    // // debtRatio=0 so that price = terms.minimumPrice;
+    // const priceSol = minimumPrice;
+    // expect(Number(priceSol)).to.equal(internalPrice)
+  });
 });
 

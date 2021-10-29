@@ -1,9 +1,8 @@
 import {expect} from './chai-setup';
-import {ethers, deployments, getUnnamedAccounts} from 'hardhat';
-import {setupUsers, config, randomAddress} from './utils';
+import {ethers, deployments} from 'hardhat';
+import {config, randomAddress} from './utils';
 import {Factory, FactoryStorage, SubsidyRouter, MockToken} from '../typechain';
-// import { MockToken } from '../typechain/MockToken';
-import { BigNumber, BigNumberish, utils } from 'ethers';
+import { BigNumber, utils } from 'ethers';
 const ERC20 = require('./utils/ERC20.json');
 
 
@@ -37,7 +36,7 @@ const setup = deployments.createFixture(async () => {
     const customBondAddr = events[0].args.bond;
     const TreasuryContract = TreasuryFactory.attach(customTreasuryAddr);//0xa47079A1f2Ad851f049fB41ee69c66a1bD09E2
     const BondContract = BondFactory.attach(customBondAddr);//0xCb37185a629590622De9d45a0376B0687Cf3b412
-
+    
     // set bond terms
     await BondContract.connect(user).setBondTerms(0, 20000, {from: user.address})//_input >= 10000, terms.vestingTerm
     await BondContract.connect(user).setBondTerms(1, 150, {from: user.address})  //_input <= 1000,  terms.maxPayout
@@ -72,12 +71,12 @@ describe('CustomBond-redeem', async function () {
     const initialDebt = utils.parseEther('400')
     await BondContract.connect(user).initializeBond(controlVariable, vestingTerm, minimumPrice, maxPayout, maxDebt, initialDebt, {from:user.address})
     
-    // payoutTokenContract=Dai(decimals:6), 
+    // payoutTokenContract=USDC(decimals:6), 
     // principleToken=tokenContract(decimals:18)     
 
     // payoutToken
     const payoutTokenContract = new ethers.Contract(config.usdcAdress, JSON.stringify(ERC20), ethers.provider)
-    await payoutTokenContract.connect(deployer).transfer(user.address, utils.parseEther('1.5'), {from: deployer.address});
+    await payoutTokenContract.connect(deployer).transfer(user.address, utils.parseUnits('1000', await payoutTokenContract.decimals()), {from: deployer.address});
     const payoutTokenBalanceDeployer = Number(await payoutTokenContract.balanceOf(deployer.address));//0.5*10**18
     const payoutTokenBalanceToUser = Number(await payoutTokenContract.balanceOf(user.address));//1500000000040000000, decimal=6
     const payoutTokenBalanceToUser1 = await payoutTokenContract.balanceOf(user.address);
@@ -95,11 +94,11 @@ describe('CustomBond-redeem', async function () {
     // Allow to deposit from user
     await TreasuryContract.connect(user).toggleBondContract(BondContract.address, {from:user.address})
 
-    const amount = utils.parseEther('0.1');// principleToken amount for deposit
+    const amount = utils.parseEther('1');// principleToken amount for deposit
     const maxPrice = 50000;//>= nativePrice(37682)
     
     // Transfer(payoutToken) to TreasuryContract for testing
-    const transferAmount = utils.parseEther('1');//= 1 eth
+    const transferAmount = utils.parseUnits('500', await payoutTokenContract.decimals());
     await payoutTokenContract.connect(user).transfer(TreasuryContract.address, transferAmount, {from: user.address});
 
     // Depoist principleToken(lp token) from user
@@ -173,7 +172,7 @@ describe('CustomBond-redeem', async function () {
 
     // payoutToken
     const payoutTokenContract = new ethers.Contract(config.usdcAdress, JSON.stringify(ERC20), ethers.provider)
-    await payoutTokenContract.connect(deployer).transfer(user.address, utils.parseEther('1.5'), {from: deployer.address});
+    await payoutTokenContract.connect(deployer).transfer(user.address, utils.parseUnits('1000', await payoutTokenContract.decimals()), {from: deployer.address});
     const payoutTokenBalanceDeployer = Number(await payoutTokenContract.balanceOf(deployer.address));//0.5*10**18
     const payoutTokenBalanceToUser = Number(await payoutTokenContract.balanceOf(user.address));//1500000000040000000, decimal=6
     const payoutTokenBalanceToUser1 = await payoutTokenContract.balanceOf(user.address);
@@ -191,11 +190,11 @@ describe('CustomBond-redeem', async function () {
     // Allow to deposit from user
     await TreasuryContract.connect(user).toggleBondContract(BondContract.address, {from:user.address})
 
-    const amount = utils.parseEther('0.1');
+    const amount = utils.parseEther('1');// principleToken amount for deposit
     const maxPrice = 50000;//>= nativePrice(37682)
     
     // Transfer(payoutToken) to TreasuryContract for testing
-    const transferAmount = utils.parseEther('1');//= 1 eth
+    const transferAmount = utils.parseUnits('500', await payoutTokenContract.decimals());
     await payoutTokenContract.connect(user).transfer(TreasuryContract.address, transferAmount, {from: user.address});
 
     // Depoist principleToken(lp token) from user

@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity 0.8.0;
+pragma solidity 0.7.5;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20Burnable.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-/**
- * This smart contract
- */
 
-contract MockToken is Ownable, ERC20 {
+contract MockToken is ERC20Burnable, Ownable {
     using SafeMath for uint256;
 
     mapping(address => bool) private addressToIsMinter;
@@ -24,9 +21,11 @@ contract MockToken is Ownable, ERC20 {
 
     constructor(
         string memory _name,
-        string memory _symbol
+        string memory _symbol,
+        uint8 _decimals
     ) ERC20(_name, _symbol) {
-        _mint(msg.sender, uint256(100000000).mul(10**18));
+        _setupDecimals(_decimals);
+        _mint(msg.sender, uint256(100000000).mul(10**uint256(_decimals)));
     }
 
     function mintFor(address _who, uint256 _amount) external onlyMinter {
@@ -43,4 +42,3 @@ contract MockToken is Ownable, ERC20 {
         }
     }
 }
-

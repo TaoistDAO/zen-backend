@@ -32,6 +32,9 @@ contract Helper is IHelper {
 
         // Execute call
         _;
+
+        // remain spendAsset to send caller back
+        __transferAssetToCaller(_caller, spendAsset);
     }
 
     constructor(
@@ -95,10 +98,7 @@ contract Helper is IHelper {
         
         (lpAddress_, lpAmount_) = lendForLPDirect(
             _caller,
-            _path[0],
-            _path[1],
-            _payoutAmount,
-            _expectedAmount,
+            _path,
             _payoutAmount,
             _expectedAmount
         );
@@ -126,10 +126,7 @@ contract Helper is IHelper {
         console.log("==sol-swapETH::", "ok");
         (lpAddress_, lpAmount_) = lendForLPDirect(
             _caller,
-            _path[0],
-            _path[1],
-            _payoutAmount,
-            _expectedAmount,
+            _path,
             _payoutAmount,
             _expectedAmount
         );
@@ -138,40 +135,33 @@ contract Helper is IHelper {
 
     function lendForLPDirect(
         address _caller,
-        address _tokenA,
-        address _tokenB,
+        address[] memory _path,
         uint256 _amountADesired,
-        uint256 _amountBDesired,
-        uint256 _amountAmin,
-        uint256 _amountBmin
+        uint256 _amountBDesired
     )
         public  
         returns (address lpAddress_, uint256 lpAmount_)
     {
-        if(_tokenA == address(ETH_ADDRESS)) {
+        require(IUniswapV2Factory(UNISWAP2_FACTORY).getPair(_path[0], _path[1]) != address(0), "Lend: No Pool");
+
+        if(_path[0] == address(ETH_ADDRESS)) {
             lpAmount_ = __lendETHForLPDirect(
                 _caller,
-                _tokenA,
-                _tokenB,
+                _path,
                 _amountADesired,
-                _amountBDesired,
-                _amountAmin,
-                _amountBmin
+                _amountBDesired
             );
         } else {
             lpAmount_ = __lendTokenForLPDirect(
                 _caller,
-                _tokenA,
-                _tokenB,
+                _path,
                 _amountADesired,
-                _amountBDesired,
-                _amountAmin,
-                _amountBmin
+                _amountBDesired
             ); 
         }
                
 
-        lpAddress_ = IUniswapV2Factory(UNISWAP2_FACTORY).getPair(_tokenA, _tokenB);
+        lpAddress_ = IUniswapV2Factory(UNISWAP2_FACTORY).getPair(_path[0], _path[1]);
 
         __transferAssetToCaller(_caller, lpAddress_);        
     }
@@ -180,26 +170,21 @@ contract Helper is IHelper {
     /// @dev Avoid stack too deep
     function __lendETHForLPDirect(
         address _caller,
-        address _tokenA,
-        address _tokenB,
+        address[] memory _path,
         uint256 _amountADesired,
-        uint256 _amountBDesired,
-        uint256 _amountAMin,
-        uint256 _amountBMin
+        uint256 _amountBDesired
     ) public payable returns (uint256 lpAmount_) {
-        __approveMaxAsNeeded(_tokenA, UNISWAP2_ROUTER, _amountADesired);
-        __approveMaxAsNeeded(_tokenB, UNISWAP2_ROUTER, _amountBDesired);
-        
-        require(IUniswapV2Factory(UNISWAP2_FACTORY).getPair(_tokenA, _tokenB) != address(0), "Lend: No Pool");
+        __approveMaxAsNeeded(_path[0], UNISWAP2_ROUTER, _amountADesired);
+        __approveMaxAsNeeded(_path[1], UNISWAP2_ROUTER, _amountBDesired);
 
         payable(address(UNISWAP2_ROUTER)).transfer(_amountADesired);
         // Execute lend on Uniswap
-        console.log("==sol-payoutL::", IERC20(_tokenA).balanceOf(address(this)), _amountADesired);
+        console.log("==sol-payoutL::", IERC20(_path[0]).balanceOf(address(this)), _amountADesired);
         (, , lpAmount_) = IUniswapV2Router2(UNISWAP2_ROUTER).addLiquidityETH (
-            _tokenB,
+            _path[1],
             _amountBDesired,
-            _amountAMin,
-            _amountBMin,
+            1,
+            1,
             _caller,
             block.timestamp.add(1)
         );
@@ -209,27 +194,29 @@ contract Helper is IHelper {
     /// @dev Avoid stack too deep
     function __lendTokenForLPDirect(
         address _caller,
-        address _tokenA,
-        address _tokenB,
+        address[] memory _path,
         uint256 _amountADesired,
-        uint256 _amountBDesired,
-        uint256 _amountAMin,
-        uint256 _amountBMin
+        uint256 _amountBDesired
     ) public payable returns (uint256 lpAmount_) {
-        __approveMaxAsNeeded(_tokenA, UNISWAP2_ROUTER, _amountADesired);
-        __approveMaxAsNeeded(_tokenB, UNISWAP2_ROUTER, _amountBDesired);
+        __approveMaxAsNeeded(_path[0], UNISWAP2_ROUTER, _amountADesired);
+        __approveMaxAsNeeded(_path[1], UNISWAP2_ROUTER, _amountBDesired);
         
-        require(IUniswapV2Factory(UNISWAP2_FACTORY).getPair(_tokenA, _tokenB) != address(0), "Lend: No Pool");
-
+        console.log("==sol-payoutT::", IERC20(_path[0]).balanceOf(address(this)), IERC20(_path[1]).balanceOf(address(this)));
+        // Get expected output amount on Uniswap
+        address[] memory path = new address[](2);
+        path[0] = _path[1];
+        path[1] = _path[0];
+        uint256 amountAMax = IUniswapV2Router2(UNISWAP2_ROUTER).getAmountsOut(_amountBDesired, path)[1];
+        console.log("==sol-amountAMax::", amountAMax);
+        
         // Execute lend on Uniswap
-        console.log("==sol-payoutT::", IERC20(_tokenA).balanceOf(address(this)), IERC20(_tokenB).balanceOf(address(this)));
         (, , lpAmount_) = IUniswapV2Router2(UNISWAP2_ROUTER).addLiquidity(
-            _tokenA,
-            _tokenB,
-            _amountADesired,
+            _path[0],
+            _path[1],
+            amountAMax,
             _amountBDesired,
-            _amountAMin,
-            _amountBMin,
+            1,
+            1,
             _caller,
             block.timestamp.add(1)
         );

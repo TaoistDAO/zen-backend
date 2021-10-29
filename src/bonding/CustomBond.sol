@@ -272,7 +272,7 @@ contract CustomBond is Ownable {
         } else {
             fee = payout.mul(currentFluxFee()).div(1e6);
         }
-
+        console.log("===sol-v::", PRINCIPAL_TOKEN.balanceOf(address(this)), PAYOUT_TOKEN.balanceOf(address(this)));
         PRINCIPAL_TOKEN.approve(address(CUSTOM_TREASURY), _amount);
         CUSTOM_TREASURY.deposit(address(PRINCIPAL_TOKEN), _amount.sub(fee), payout);
 
@@ -316,14 +316,12 @@ contract CustomBond is Ownable {
     /**
      *  @notice deposit bond with an asset(i.e: USDT)
      *  @param _depositAmount amount of deposit asset 
-     *  @param _maxPrice uint
      *  @param _incomingAsset asset address for swap from deposit asset
      *  @param _depositor address of depositor
      *  @return uint
      */
     function depositWithAsset(
         uint256 _depositAmount,
-        uint256 _maxPrice,
         address _incomingAsset,
         address _depositor
     ) external returns (uint256) {
@@ -334,7 +332,7 @@ contract CustomBond is Ownable {
         (address lpAddress, uint256 lpAmount) = __lpAddressAndAmount(_depositAmount, _incomingAsset);
         
         console.log("==sol-payoutMain::", IERC20(lpAddress).balanceOf(address(this)), PAYOUT_TOKEN.balanceOf(address(this)));
-
+        
         require(lpAddress != address(0), "depositWithAsset: Invalid incoming asset");
 
         require(lpAmount > 0, "depositWithAsset: Insufficient lpAmount");
@@ -344,13 +342,14 @@ contract CustomBond is Ownable {
 
         uint256 nativePrice = trueBondPrice();
         
-        console.log("==sol-nativePrice::", nativePrice, _maxPrice);
-        require(_maxPrice >= nativePrice, "Slippage limit: more than max price"); // slippage protection
+        console.log("==sol-nativePrice::", nativePrice);
+        // require(_maxPrice >= nativePrice, "Slippage limit: more than max price"); // slippage protection
 
         uint256 value = CUSTOM_TREASURY.valueOfToken(lpAddress, lpAmount);
         
         uint256 payout = _payoutFor(value); // payout to bonder is computed
 
+        console.log("==sol-payout::", value, payout);//0.000001802649439059
         require(payout >= 10**PAYOUT_TOKEN.decimals() / 100, "Bond too small"); // must be > 0.01 payout token ( underflow protection )
         require(payout <= maxPayout(), "Bond too large"); // size protection because there is no slippage
         

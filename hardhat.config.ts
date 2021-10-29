@@ -1,31 +1,32 @@
-import 'dotenv/config';
-import {HardhatUserConfig} from 'hardhat/types';
-import 'hardhat-deploy';
-import '@nomiclabs/hardhat-ethers';
-import 'hardhat-gas-reporter';
+'use strict';
+
+import "dotenv/config";
+
+import { task, HardhatUserConfig } from "hardhat/config";
+import { NetworkUserConfig } from "hardhat/types";
+import { config as dotenvConfig } from "dotenv";
+import { resolve } from "path";
 import '@typechain/hardhat';
-import 'solidity-coverage';
+import "@nomiclabs/hardhat-ethers"
+import "@nomiclabs/hardhat-waffle"
+import "hardhat-deploy"
 import "@nomiclabs/hardhat-etherscan"
-// import {node_url, accounts} from './utils/network';
 
+task("accounts", "Prints the list of accounts", async (args, hre) => {
+  const accounts = await hre.ethers.getSigners();
+  for (const account of accounts) {
+    console.log(account.address);
+  }
+});
 
-const fakeMnemonic = {mnemonic: "test test test test test test test test test test test junk"};
-const mnemonic = process.env.MNEMONIC;
+dotenvConfig({ path: resolve(__dirname, "./.env") });
+
+const alchemy_api_key = process.env.ALCHEMY_KEY;
 const etherScan_api_key = process.env.ETHERSCAN_API_KEY;
-function node(networkName: string) {
-  const fallback = 'http://localhost:8545';
-  const uppercase = networkName.toUpperCase();
-  const uri = process.env[`ETHEREUM_NODE_${uppercase}`] || process.env.ETHEREUM_NODE || fallback;
-  return uri.replace('{{NETWORK}}', networkName);
-}
+const mnemonic = process.env.MNEMONIC;
 
-function accounts(networkName: string) {
-  const uppercase = networkName.toUpperCase();
-  const accounts = process.env[`ETHEREUM_ACCOUNTS_${uppercase}`] || process.env.ETHEREUM_ACCOUNTS || '';
-  return accounts
-    .split(',')
-    .map((account) => account.trim())
-    .filter(Boolean);
+if (!mnemonic || !alchemy_api_key || !etherScan_api_key) {
+  throw new Error("Please set your data in a .env file");
 }
 
 const chainIds = {
@@ -38,70 +39,52 @@ const chainIds = {
   ropsten: 3,
 };
 
-const config: HardhatUserConfig = {  
-  defaultNetwork: 'hardhat',
+function nodeAlchemy(network: keyof typeof chainIds): NetworkUserConfig {
+  const url: string = "https://eth-" + network + ".alchemyapi.io/v2/" + alchemy_api_key;
+  return {
+    url: url,
+    accounts: { mnemonic },
+    chainId: chainIds[network],
+    saveDeployments: true,
+  };
+}
+
+const config: HardhatUserConfig = {
   networks: {
     hardhat: {
-      initialBaseFeePerGas: 0,
       allowUnlimitedContractSize: true,
-      forking: {
-        url: node('mainnet'),
+      accounts: {
+        mnemonic,
       },
-      accounts: {mnemonic},
-      // chainId: chainIds.rinkeby,
-      // forking: {
-      //   url: node('rinkeby'),
-      //   enabled: true
-      // },
-      gasPrice: 'auto',
+      chainId: chainIds.rinkeby,
+      saveDeployments: true,
+      forking: {
+        url: "https://eth-rinkeby.alchemyapi.io/v2/khT7j5E7O7LBI-Vf53jsKg9epwhAk2uh",
+      },
     },
-    mainnet: {
-      url: node('mainnet'),
-      accounts: accounts('mainnet'),
-    },
-    rinkeby: {
-      url: node('rinkeby'),
-      accounts: accounts('rinkeby'),
-    },
-    kovan: {
-      url: node('kovan'),
-      accounts: { mnemonic},
-    },
-    arbitrum: {
-      url: 'https://rinkeby.arbitrum.io/rpc',
-      gasPrice: 0,
-    },
+    kovan: nodeAlchemy("kovan"),
+    rinkeby: nodeAlchemy("rinkeby"),
+    ropsten: nodeAlchemy('ropsten'),
+    mainnet: nodeAlchemy('mainnet'),
   },
-  namedAccounts: {
-    deployer: {
-      default: 0,
-    },
-  },  
   etherscan: {
     apiKey: etherScan_api_key
   },
   paths: {
-    sources: 'src',
-    artifacts: "artifacts",
-    cache: "cache",
-    deploy: "deploy",
-    deployments: "deployments",
+    sources: "./src",
+    tests: "./test",
+    cache: "./cache",
+    artifacts: "./artifacts",
+    deploy: "deploy",    
     imports: "imports",
-    tests: "test",
-  },
-  gasReporter: {
-    currency: 'USD',
-    gasPrice: 100,
-    enabled: process.env.REPORT_GAS ? true : false,
-    coinmarketcap: process.env.COINMARKETCAP_API_KEY,
-    maxMethodDiff: 10,
+    deployments: "deployments"    
   },
   typechain: {
     outDir: 'typechain',
     target: 'ethers-v5',
   },
-  mocha: {
-    timeout: 0,
+  namedAccounts: {
+    deployer: 0,
   },
   solidity: {
     compilers: [
@@ -114,27 +97,11 @@ const config: HardhatUserConfig = {
           },
         },
       },
-      {
-        version: '0.8.0',
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 2000,
-          },
-        },
-      }
     ],
   },
-  // external: process.env.HARDHAT_FORK
-  //   ? {
-  //       deployments: {
-  //         // process.env.HARDHAT_FORK will specify the network that the fork is made from.
-  //         // these lines allow it to fetch the deployments from the network being forked from both for node and deploy task
-  //         hardhat: ['deployments/' + process.env.HARDHAT_FORK],
-  //         localhost: ['deployments/' + process.env.HARDHAT_FORK],
-  //       },
-  //     }
-  //   : undefined,
+  mocha: {
+    timeout: 200e3
+  },  
 };
 
 export default config;

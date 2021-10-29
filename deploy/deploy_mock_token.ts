@@ -8,11 +8,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   } = hre;
 
   const deployer = (await getSigners())[0];
+  console.log("====deployer::", deployer.address);
+  
   await deploy('MockToken', {
     from: deployer.address,
-    args: ["Mock Token", "sTao"],
+    args: ["Mock Token", "sTao", 18],
     log: true,    
-    // skipIfAlreadyDeployed: true,
+    skipIfAlreadyDeployed: true,
     autoMine: true, // speed up deployment on local network (ganache, hardhat), no effect on live networks
   });
 };

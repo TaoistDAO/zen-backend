@@ -6,14 +6,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const {
     deployments: { deploy, get },
     ethers: { getSigners },
-    getNamedAccounts,
   } = hre;
 
   const deployer = (await getSigners())[0]; 
   const factoryStorage = await get('FactoryStorage');
   const subsidyRouter = await get('SubsidyRouter');
   const helper = await get('Helper');
-        
+  const mockToken = await get('MockToken');
+
   await deploy('Factory', {
     from: deployer.address,
     args: [
@@ -31,6 +31,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 func.id = 'deploy_factory'; // id required to prevent reexecution
 func.tags = ['Factory'];
-func.dependencies = ['FactoryStorage', 'SubsidyRouter', 'Helper'];
+func.dependencies = ['FactoryStorage', 'SubsidyRouter', 'Helper', 'MockToken'];
 
 export default func;
