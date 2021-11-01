@@ -2,7 +2,7 @@
 
 import "dotenv/config";
 
-import { task, HardhatUserConfig } from "hardhat/config";
+import { HardhatUserConfig } from "hardhat/config";
 import { NetworkUserConfig } from "hardhat/types";
 import { config as dotenvConfig } from "dotenv";
 import { resolve } from "path";
@@ -11,13 +11,6 @@ import "@nomiclabs/hardhat-ethers"
 import "@nomiclabs/hardhat-waffle"
 import "hardhat-deploy"
 import "@nomiclabs/hardhat-etherscan"
-
-task("accounts", "Prints the list of accounts", async (args, hre) => {
-  const accounts = await hre.ethers.getSigners();
-  for (const account of accounts) {
-    console.log(account.address);
-  }
-});
 
 dotenvConfig({ path: resolve(__dirname, "./.env") });
 

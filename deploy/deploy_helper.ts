@@ -13,8 +13,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await deploy('Helper', {
     from: deployer.address,
     args: [
+      config.uniswap.factory,
       config.uniswap.router, 
-      config.uniswap.factory
+      config.sushiswapRinkeby.factory,
+      config.sushiswapRinkeby.router
     ],
     log: true,    
     skipIfAlreadyDeployed: true,

@@ -2,9 +2,7 @@
 
 pragma solidity 0.7.5;
 
-
 /// @title UniswapV2Router2 Interface
-/// @dev Minimal interface for our interactions with Uniswap V2's Router2
 interface IUniswapV2Router2 {
 
     function factory() external pure returns (address);

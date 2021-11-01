@@ -9,8 +9,7 @@ import "./CustomBond.sol";
 import "./CustomTreasury.sol";
 import "../interfaces/IFactoryStorage.sol";
 
-contract Factory is Ownable {
-    
+contract Factory is Ownable {    
     using SafeMath for uint256;
 
     address immutable public TREASURY;

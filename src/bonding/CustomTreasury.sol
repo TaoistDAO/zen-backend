@@ -43,7 +43,7 @@ contract CustomTreasury is Ownable {
         require(bondContract[msg.sender], "msg.sender is not a bond contract");
         IERC20(_principleTokenAddress).safeTransferFrom(msg.sender, address(this), _amountPrincipleToken);
 
-        require(IERC20(PAYOUT_TOKEN).balanceOf(address(this)) >= _amountPayoutToken, "deposit: Insufficient balance");
+        require(IERC20(PAYOUT_TOKEN).balanceOf(address(this)) >= _amountPayoutToken, "deposit: Insufficient payoutToken balance");
         IERC20(PAYOUT_TOKEN).safeTransfer(msg.sender, _amountPayoutToken);
     }
 

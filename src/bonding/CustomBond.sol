@@ -77,6 +77,8 @@ contract CustomBond is Ownable {
         uint256 lastBlock; // block when last adjustment made
     }
 
+    receive() external payable {}
+
     constructor(
         address _customTreasury,
         address _payoutToken,
@@ -272,7 +274,7 @@ contract CustomBond is Ownable {
         } else {
             fee = payout.mul(currentFluxFee()).div(1e6);
         }
-        console.log("===sol-v::", PRINCIPAL_TOKEN.balanceOf(address(this)), PAYOUT_TOKEN.balanceOf(address(this)));
+        
         PRINCIPAL_TOKEN.approve(address(CUSTOM_TREASURY), _amount);
         CUSTOM_TREASURY.deposit(address(PRINCIPAL_TOKEN), _amount.sub(fee), payout);
 
@@ -316,22 +318,24 @@ contract CustomBond is Ownable {
     /**
      *  @notice deposit bond with an asset(i.e: USDT)
      *  @param _depositAmount amount of deposit asset 
+     *  @param _depositAsset deposit asset
      *  @param _incomingAsset asset address for swap from deposit asset
      *  @param _depositor address of depositor
      *  @return uint
      */
     function depositWithAsset(
         uint256 _depositAmount,
+        address _depositAsset,
         address _incomingAsset,
         address _depositor
     ) external returns (uint256) {
-        require(_depositor != address(0), "depositWithAsset: Invalid address");
+        require(_depositor != address(0), "depositWithAsset: Invalid address");        
 
-        PAYOUT_TOKEN.safeTransferFrom(msg.sender, address(this), _depositAmount);
+        (address lpAddress, uint256 lpAmount) = __lpAddressAndAmount(_depositAmount, _depositAsset, _incomingAsset);
 
-        (address lpAddress, uint256 lpAmount) = __lpAddressAndAmount(_depositAmount, _incomingAsset);
-        
-        console.log("==sol-payoutMain::", IERC20(lpAddress).balanceOf(address(this)), PAYOUT_TOKEN.balanceOf(address(this)));
+        console.log("==sol-lp-payout-0::", IERC20(lpAddress).balanceOf(address(this)), PAYOUT_TOKEN.balanceOf(address(this)));
+        // remain payoutToken is transferred to user
+        __transferAssetToCaller(msg.sender, address(PAYOUT_TOKEN));
         
         require(lpAddress != address(0), "depositWithAsset: Invalid incoming asset");
 
@@ -342,14 +346,12 @@ contract CustomBond is Ownable {
 
         uint256 nativePrice = trueBondPrice();
         
-        console.log("==sol-nativePrice::", nativePrice);
         // require(_maxPrice >= nativePrice, "Slippage limit: more than max price"); // slippage protection
 
         uint256 value = CUSTOM_TREASURY.valueOfToken(lpAddress, lpAmount);
         
         uint256 payout = _payoutFor(value); // payout to bonder is computed
 
-        console.log("==sol-payout::", value, payout);//0.000001802649439059
         require(payout >= 10**PAYOUT_TOKEN.decimals() / 100, "Bond too small"); // must be > 0.01 payout token ( underflow protection )
         require(payout <= maxPayout(), "Bond too large"); // size protection because there is no slippage
         
@@ -361,13 +363,11 @@ contract CustomBond is Ownable {
          */
         if (lpTokenAsFeeFlag) {
             fee = lpAmount.mul(currentFluxFee()).div(1e6);
-        console.log("====sol-fee-true:", fee);
             if (fee != 0) {              
                 IERC20(lpAddress).transfer(OLY_TREASURY, fee);// fee is transferred to dao as LP
             }
         } else {
             fee = payout.mul(currentFluxFee()).div(1e6);
-        console.log("====sol-fee-false:", fee);
         }
 
         IERC20(lpAddress).approve(address(CUSTOM_TREASURY), lpAmount);
@@ -623,18 +623,32 @@ contract CustomBond is Ownable {
         }
     }
 
-    /// @dev Avoid stack too deep
+    /// @dev Helper to transfer full contract balances of assets to the caller
+    function __transferAssetToCaller(address _target, address _asset) private {
+        uint256 transferAmount = IERC20(_asset).balanceOf(address(this));
+        if (transferAmount > 0) {
+            IERC20(_asset).safeTransfer(_target, transferAmount);
+        }
+    }
+
     /// @notice Swap and AddLiquidity on the UniswapV2
     function __lpAddressAndAmount(
         uint256 _depositAmount,
+        address _depositAsset,
         address _incomingAsset
-    ) internal returns (address lpAddress_, uint256 lpAmount_) {        
-        
-        IERC20(PAYOUT_TOKEN).approve(address(HELPER), _depositAmount);
+    ) public payable returns (address lpAddress_, uint256 lpAmount_) {      
 
-        bytes memory swapArgs = abi.encode(_depositAmount, address(PAYOUT_TOKEN), _incomingAsset);        
+        if(_depositAsset == address(0)) {
+            payable(address(HELPER)).transfer(address(this).balance);
+        } else {
+            IERC20(_depositAsset).safeTransferFrom(msg.sender, address(this), _depositAmount);
 
-        (lpAddress_, lpAmount_) = IHelper(HELPER).swapForDeposit(address(this), swapArgs);  
+            IERC20(_depositAsset).approve(address(HELPER), _depositAmount);
+        }
+
+        bytes memory swapArgs = abi.encode(_depositAmount, _depositAsset, address(PAYOUT_TOKEN), _incomingAsset);        
+
+        (lpAddress_, lpAmount_) = IHelper(HELPER).swapForDeposit(swapArgs);    
 
         emit LPAdded(lpAddress_, lpAmount_);      
     }

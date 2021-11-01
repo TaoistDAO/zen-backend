@@ -2,6 +2,7 @@
 
 pragma solidity 0.7.5;
 
+/// @title CustomTreasury Interface
 interface ITreasury {
     function deposit(
         address _principleTokenAddress,

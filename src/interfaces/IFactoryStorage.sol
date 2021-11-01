@@ -2,6 +2,7 @@
 
 pragma solidity 0.7.5;
 
+/// @title IFactoryStorage Interface
 interface IFactoryStorage {
     function pushBond(
         address _payoutToken,

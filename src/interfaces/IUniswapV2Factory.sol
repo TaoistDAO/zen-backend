@@ -4,7 +4,6 @@
 pragma solidity 0.7.5;
 
 /// @title IUniswapV2Factory Interface
-/// @notice Minimal interface for our interactions with the Uniswap V2's Factory contract
 interface IUniswapV2Factory {
     event PairCreated(address indexed token0, address indexed token1, address pair, uint);
 
