@@ -12,7 +12,7 @@ contract CustomTreasury is Ownable {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
-    address public immutable PAYOUT_TOKEN;
+    address public immutable payoutToken;
 
     mapping(address => bool) public bondContract;
 
@@ -22,7 +22,7 @@ contract CustomTreasury is Ownable {
 
     constructor(address _payoutToken, address _initialOwner) {
         require(_payoutToken != address(0), "CustomTreasury: payoutToken must not be zero address");
-        PAYOUT_TOKEN = _payoutToken;
+        payoutToken = _payoutToken;
         require(_initialOwner != address(0), "CustomTreasury: initialOwner must not be zero address");
         policy = _initialOwner;
     }
@@ -42,9 +42,9 @@ contract CustomTreasury is Ownable {
     ) external {
         require(bondContract[msg.sender], "msg.sender is not a bond contract");
         IERC20(_principleTokenAddress).safeTransferFrom(msg.sender, address(this), _amountPrincipleToken);
-
-        require(IERC20(PAYOUT_TOKEN).balanceOf(address(this)) >= _amountPayoutToken, "deposit: Insufficient payoutToken balance");
-        IERC20(PAYOUT_TOKEN).safeTransfer(msg.sender, _amountPayoutToken);
+        
+        require(IERC20(payoutToken).balanceOf(address(this)) >= _amountPayoutToken, "deposit: Insufficient payoutToken balance");
+        IERC20(payoutToken).safeTransfer(msg.sender, _amountPayoutToken);
     }
 
     /* ======== VIEW FUNCTION ======== */
@@ -57,7 +57,7 @@ contract CustomTreasury is Ownable {
      */
     function valueOfToken(address _principleTokenAddress, uint256 _amount) public view returns (uint256 value_) {
         // convert amount to match payout token decimals
-        value_ = _amount.mul(10**IERC20(PAYOUT_TOKEN).decimals()).div(10**IERC20(_principleTokenAddress).decimals());
+        value_ = _amount.mul(10**IERC20(payoutToken).decimals()).div(10**IERC20(_principleTokenAddress).decimals());
     }
 
     /* ======== POLICY FUNCTIONS ======== */

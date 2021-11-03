@@ -92,6 +92,7 @@ contract Helper is IHelper {
         address factory;
         uint256 payoutAmount = depositAmount;     
         address[] memory path = new address[](2);  
+
         if(depositAsset != payoutAsset) {             
             path[0] = depositAsset;            
             if(path[0] == address(0)) {
@@ -186,53 +187,19 @@ contract Helper is IHelper {
         private  
         returns (address lpAddress_, uint256 lpAmount_)
     {
-        if(_path[0] == address(ETH_ADDRESS) || _path[0] == WETH) {
-            lpAmount_ = __addETHAndToken(
-                _router,
-                _path,
-                _amountADesired,
-                _amountBDesired
-            );
-        } else {
-            lpAmount_ = __addTokenAndToken(
-                _router,
-                _path,
-                _amountADesired,
-                _amountBDesired
-            ); 
-        }
-               
+        lpAmount_ = __addTokenAndToken(
+            _router,
+            _path,
+            _amountADesired,
+            _amountBDesired
+        );                
 
         lpAddress_ = IUniswapV2Factory(_factory).getPair(_path[0], _path[1]);
 
         __transferAssetToCaller(msg.sender, lpAddress_);        
     }
 
-    /// @notice addLiquidityETH for lp tokens on uni/sushi
-    function __addETHAndToken(
-        address _router,
-        address[] memory _path,
-        uint256 _amountADesired,
-        uint256 _amountBDesired
-    ) public payable returns (uint256 lpAmount_) {
-        __approveMaxAsNeeded(_path[0], _router, _amountADesired);
-        __approveMaxAsNeeded(_path[1], _router, _amountBDesired);
-
-        payable(address(_router)).transfer(_amountADesired);
-
-        // Execute addLiquidityETH on Uniswap/Sushi
-        (, , lpAmount_) = IUniswapV2Router2(_router).addLiquidityETH{value: address(this).balance}(
-            _path[1],
-            _amountBDesired,
-            1,
-            1,
-            msg.sender,
-            block.timestamp.add(1)
-        );
-    }
-
     /// @notice addLiquidity for lp tokens on Uniswap/Sushi
-    /// @dev Avoid stack too deep
     function __addTokenAndToken(
         address _router,
         address[] memory _path,
