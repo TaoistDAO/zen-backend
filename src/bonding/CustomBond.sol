@@ -135,7 +135,13 @@ contract CustomBond is Ownable {
         uint256 _maxDebt,
         uint256 _initialDebt
     ) external onlyPolicy {
-        require(_controlVariable == 0, "_controlVariable must be 0 for initialization");
+
+        require(terms.controlVariable == 0 && _controlVariable > 0, "initializeBond: controlVariable must be 0 for initialization");
+        
+        require(_vestingTerm >= 10000, "Vesting must be longer than 36 hours");
+
+        require(_maxPayout <= 1000, "Payout cannot be above 1 percent");
+
         terms = Terms({
             controlVariable: _controlVariable,
             vestingTerm: _vestingTerm,
@@ -143,11 +149,13 @@ contract CustomBond is Ownable {
             maxPayout: _maxPayout,
             maxDebt: _maxDebt
         });
+
         totalDebt = _initialDebt;
         lastDecay = block.number;
+        CUSTOM_TREASURY.toggleBondContract(address(this));
     }
 
-    /// @notice set control variable adjustment
+    /// @notice set fee flag
     /// @param _lpTokenAsFeeFlag bool
     function setLPtokenAsFee(bool _lpTokenAsFeeFlag) external onlyPolicy {
         lpTokenAsFeeFlag = _lpTokenAsFeeFlag;
@@ -192,6 +200,7 @@ contract CustomBond is Ownable {
         uint256 _buffer
     ) external onlyPolicy {
         require(_increment <= terms.controlVariable.mul(30).div(1000), "Increment too large");
+        require(_target > 0, "setAdjustment: target greater than 0");
 
         adjustment = Adjust({
             add: _addition,
@@ -289,17 +298,16 @@ contract CustomBond is Ownable {
         require(totalDebt <= terms.maxDebt, "Max capacity reached");
 
         uint256 nativePrice = trueBondPrice();
-
+        
         require(_maxPrice >= nativePrice, "Slippage limit: more than max price"); // slippage protection
 
         uint256 value = CUSTOM_TREASURY.valueOfToken(_lpAddress, _lpAmount);
         uint256 payout = _payoutFor(value); // payout to bonder is computed
-
+        
         require(payout >= 10**PAYOUT_TOKEN.decimals() / 100, "Bond too small"); // must be > 0.01 payout token ( underflow protection )
-        console.log("===sol-payout::", payout);
+        
         require(payout <= maxPayout(), "Bond too large"); // size protection because there is no slippage
         
-        console.log("===sol-payout-1::", "ok");
         /**
             principal is transferred in
             approved and
@@ -576,10 +584,10 @@ contract CustomBond is Ownable {
     }
 
     /// @dev Helper to transfer full contract balances of assets to the caller
-    function __transferAssetToCaller(address _target, address _asset) private {
+    function __transferAssetToCaller(address _caller, address _asset) private {
         uint256 transferAmount = IERC20(_asset).balanceOf(address(this));
         if (transferAmount > 0) {
-            IERC20(_asset).safeTransfer(_target, transferAmount);
+            IERC20(_asset).safeTransfer(_caller, transferAmount);
         }
     }
 

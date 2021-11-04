@@ -71,6 +71,7 @@
     "run": "hardhat run --network",
     "deploy:rinkeby": "hardhat deploy --network rinkeby",
     "verify": "hardhat verify --network",
+    "verify:rinkeby": "hardhat etherscan-verify --network rinkeby",
     "deploy:mainnet": "hardhat deploy --network mainnet",
     "export:mainnet": "hardhat export --network mainnet --export deployments/mainnet.json",
     "verify:mainnet": "hardhat verify --network mainnet"
