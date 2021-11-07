@@ -5,14 +5,12 @@ import "./test.sol";
 import "../src/bonding/FactoryStorage.sol";
 
 contract FactoryStorageTest is DSTest {
-    FactoryStorage internal factoryStorage;
-
-    function setUp() public {
-        factoryStorage = new FactoryStorage();
-    }
-
-    function test_setFactoryAddress(address _factory) public {
-        factoryStorage.setFactoryAddress(_factory);
-        assertEq(factoryStorage.factory(), _factory);
-    }
+    // FactoryStorage internal factoryStorage;
+    // function setUp() public {
+    //     factoryStorage = new FactoryStorage();
+    // }
+    // function test_setFactoryAddress(address _factory) public {
+    //     factoryStorage.setFactoryAddress(_factory);
+    //     assertEq(factoryStorage.factory(), _factory);
+    // }
 }

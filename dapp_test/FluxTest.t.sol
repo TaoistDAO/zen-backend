@@ -4,7 +4,14 @@ pragma solidity 0.7.5;
 import "./FluxSetup.t.sol";
 
 contract FluxTest is FluxSetupTest {
-    function createBondAndTreasury() public {
-        assertEq(factory.TREASURY(), taoTreasury);
+    uint256[] public newFees = [50000];
+
+    function test_FeeAndTierCeilings() public {
+        uint256 i = 0;
+        emit log_uint(factory.fees(i));
+        assertEq(factory.fees(i), [30000][i]);
+        assertEq(factory.tierCeilings(i), [0][i]);
     }
+
+    function test_createBondAndTreasury() public {}
 }

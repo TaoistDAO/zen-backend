@@ -19,12 +19,15 @@ contract FluxSetupTest is DSTest {
     address public sushiswapFactory = 0xc35DADB65012eC5796536bD9864eD8773aBc74C4;
     address public sushiswapRouter = 0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506;
     address public taoTreasury = 0xc3Ab493d0d06c700d9daF7Ea58aBBe12038ec474;
+    uint256[] public tierCeilings = [0];
+    uint256[] public fees = [30000];
 
     function setUp() public {
         helper = new Helper(uniswapFactory, uniswapRouter, sushiswapFactory, sushiswapRouter);
         factoryStorage = new FactoryStorage();
         subsidyRouter = new SubsidyRouter();
         factory = new Factory(taoTreasury, address(factoryStorage), address(subsidyRouter), dao, address(helper));
+        factory.setTiersAndFees(tierCeilings, fees);
     }
 
     function test_factoryOwnerExpected() public {
