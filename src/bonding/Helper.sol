@@ -1,5 +1,3 @@
-
-
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.7.5;
 
@@ -11,10 +9,9 @@ import "../interfaces/IHelper.sol";
 import "hardhat/console.sol";
 
 contract Helper is IHelper {
-    
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
-    
+
     address private immutable UNISWAP2_FACTORY;
     address private immutable UNISWAP2_ROUTER;
     address private immutable SUSHI_FACTORY;
@@ -24,15 +21,12 @@ contract Helper is IHelper {
 
     /// @dev Provides a standard implementation for transferring assets between
     /// the msg.sender and the helper, by wrapping the action.
-    modifier transferHandler(bytes memory _encodedArgs) {            
-        (
-            uint256 depositAmount,
-            address depositAsset,
-            address payoutAsset,
-            address incomingAsset
-        ) = __decodeSwapArgs(_encodedArgs);
-        
-        if(depositAsset != address(0)) {
+    modifier transferHandler(bytes memory _encodedArgs) {
+        (uint256 depositAmount, address depositAsset, address payoutAsset, address incomingAsset) = __decodeSwapArgs(
+            _encodedArgs
+        );
+
+        if (depositAsset != address(0)) {
             IERC20(depositAsset).safeTransferFrom(msg.sender, address(this), depositAmount);
         }
 
@@ -43,7 +37,7 @@ contract Helper is IHelper {
         __transferAssetToCaller(msg.sender, depositAsset);
         __transferAssetToCaller(msg.sender, payoutAsset);
     }
-    
+
     receive() external payable {}
 
     constructor(
@@ -59,9 +53,10 @@ contract Helper is IHelper {
 
         UNISWAP2_FACTORY = _uniswap2Factory;
         UNISWAP2_ROUTER = _uniswap2Router;
-        SUSHI_FACTORY = _sushiswapFactory;    
-        SUSHI_ROUTER = _sushiswapRouter;  
-        WETH = IUniswapV2Router2(_uniswap2Router).WETH();
+        SUSHI_FACTORY = _sushiswapFactory;
+        SUSHI_ROUTER = _sushiswapRouter;
+        // WETH = IUniswapV2Router2(_uniswap2Router).WETH();
+        WETH = 0xc778417E063141139Fce010982780140Aa0cD5Ab;
     }
 
     /// @notice get LP token and LP amount
@@ -69,8 +64,8 @@ contract Helper is IHelper {
     /// @return lpAddress_ lp token address
     /// @return lpAmount_ lp token amount
     function swapForDeposit(bytes calldata _swapArgs)
-        external        
-        override        
+        external
+        override
         transferHandler(_swapArgs)
         returns (address lpAddress_, uint256 lpAmount_)
     {
@@ -78,60 +73,49 @@ contract Helper is IHelper {
     }
 
     /// Avoids stack-too-deep error.
-    function __swapForDeposit(bytes calldata _swapArgs) private 
-        returns (address lpAddress_, uint256 lpAmount_)
-    {
-        (
-            uint256 depositAmount,
-            address depositAsset,
-            address payoutAsset,
-            address incomingAsset
-        ) = __decodeSwapArgs(_swapArgs);
+    function __swapForDeposit(bytes calldata _swapArgs) private returns (address lpAddress_, uint256 lpAmount_) {
+        (uint256 depositAmount, address depositAsset, address payoutAsset, address incomingAsset) = __decodeSwapArgs(
+            _swapArgs
+        );
 
         address router;
         address factory;
-        uint256 payoutAmount = depositAmount;     
-        address[] memory path = new address[](2);  
+        uint256 payoutAmount = depositAmount;
+        address[] memory path = new address[](2);
 
-        if(depositAsset != payoutAsset) {             
-            path[0] = depositAsset;            
-            if(path[0] == address(0)) {
+        if (depositAsset != payoutAsset) {
+            path[0] = depositAsset;
+            if (path[0] == address(0)) {
                 path[0] = WETH;
             }
             path[1] = payoutAsset;
 
-            (router,) = __checkPool(path);
-            
+            (router, ) = __checkPool(path);
+
             require(router != address(0), "Swap: No Pool");
 
             // Get payoutAmount from depositAsset on Uniswap/Sushiswap
             payoutAmount = IUniswapV2Router2(router).getAmountsOut(depositAmount, path)[1];
-            
-            if(path[0] == WETH) {
+
+            if (path[0] == WETH) {
                 __swapETHToToken(depositAmount, payoutAmount, router, path);
             } else {
                 __swapTokenToToken(depositAmount, payoutAmount, router, path);
             }
-        }   
-        
+        }
+
         path[0] = payoutAsset;
         path[1] = incomingAsset;
 
         (router, factory) = __checkPool(path);
-        
+
         require(router != address(0), "Swap: No Pool");
 
         uint256 expectedAmount = IUniswapV2Router2(router).getAmountsOut(payoutAmount.div(2), path)[1];
 
         __swapTokenToToken(payoutAmount.div(2), expectedAmount, router, path);
-        
-        (lpAddress_, lpAmount_) = addLiquidityToken(
-            factory,
-            router,
-            path,
-            payoutAmount,
-            expectedAmount
-        );              
+
+        (lpAddress_, lpAmount_) = addLiquidityToken(factory, router, path, payoutAmount, expectedAmount);
     }
 
     /// @notice Swap ERC20 Token to ERC20 Token
@@ -142,7 +126,7 @@ contract Helper is IHelper {
         address[] memory _path
     ) private returns (uint256[] memory amounts_) {
         __approveMaxAsNeeded(_path[0], _router, _payoutAmount);
-        
+
         amounts_ = IUniswapV2Router2(_router).swapExactTokensForTokens(
             _payoutAmount,
             _expectedAmount,
@@ -182,21 +166,13 @@ contract Helper is IHelper {
         address _router,
         address[] memory _path,
         uint256 _amountADesired,
-        uint256 _amountBDesired        
-    )
-        private  
-        returns (address lpAddress_, uint256 lpAmount_)
-    {
-        lpAmount_ = __addTokenAndToken(
-            _router,
-            _path,
-            _amountADesired,
-            _amountBDesired
-        );                
+        uint256 _amountBDesired
+    ) private returns (address lpAddress_, uint256 lpAmount_) {
+        lpAmount_ = __addTokenAndToken(_router, _path, _amountADesired, _amountBDesired);
 
         lpAddress_ = IUniswapV2Factory(_factory).getPair(_path[0], _path[1]);
 
-        __transferAssetToCaller(msg.sender, lpAddress_);        
+        __transferAssetToCaller(msg.sender, lpAddress_);
     }
 
     /// @notice addLiquidity for lp tokens on Uniswap/Sushi
@@ -208,13 +184,13 @@ contract Helper is IHelper {
     ) private returns (uint256 lpAmount_) {
         __approveMaxAsNeeded(_path[0], _router, _amountADesired);
         __approveMaxAsNeeded(_path[1], _router, _amountBDesired);
-        
+
         // Get expected output amount on Uniswap/Sushi
         address[] memory path = new address[](2);
         path[0] = _path[1];
         path[1] = _path[0];
         uint256 amountAMax = IUniswapV2Router2(_router).getAmountsOut(_amountBDesired, path)[1];
-        
+
         // Execute addLiquicity on Uniswap/Sushi
         (, , lpAmount_) = IUniswapV2Router2(_router).addLiquidity(
             _path[0],
@@ -256,7 +232,7 @@ contract Helper is IHelper {
     /// @dev Helper to transfer full contract balances of assets to the caller
     function __transferAssetToCaller(address payable _target, address _asset) private {
         uint256 transferAmount;
-        if(_asset == address(ETH_ADDRESS) || _asset == address(0)) {
+        if (_asset == address(ETH_ADDRESS) || _asset == address(0)) {
             transferAmount = address(this).balance;
             if (transferAmount > 0) {
                 _target.transfer(transferAmount);
@@ -266,21 +242,21 @@ contract Helper is IHelper {
             if (transferAmount > 0) {
                 IERC20(_asset).safeTransfer(_target, transferAmount);
             }
-        }        
+        }
     }
 
     /// @dev check if special pool exist on uniswap or sushiswap
-    function __checkPool(address[] memory _path) private view returns (address router_, address factory_) {        
-        address uniPool = IUniswapV2Factory(UNISWAP2_FACTORY).getPair(_path[0], _path[1]);   
+    function __checkPool(address[] memory _path) private view returns (address router_, address factory_) {
+        address uniPool = IUniswapV2Factory(UNISWAP2_FACTORY).getPair(_path[0], _path[1]);
         address sushiPool = IUniswapV2Factory(SUSHI_FACTORY).getPair(_path[0], _path[1]);
-        
-        if(uniPool == address(0) && sushiPool != address(0)) {
+
+        if (uniPool == address(0) && sushiPool != address(0)) {
             return (SUSHI_ROUTER, SUSHI_FACTORY);
-        } else if(uniPool != address(0) && sushiPool == address(0)) {
+        } else if (uniPool != address(0) && sushiPool == address(0)) {
             return (UNISWAP2_ROUTER, UNISWAP2_FACTORY);
-        } else if(uniPool != address(0) && sushiPool != address(0)) {
+        } else if (uniPool != address(0) && sushiPool != address(0)) {
             return (UNISWAP2_ROUTER, UNISWAP2_FACTORY);
-        } else if(uniPool == address(0) && sushiPool == address(0)) {
+        } else if (uniPool == address(0) && sushiPool == address(0)) {
             return (address(0), address(0));
         }
     }
