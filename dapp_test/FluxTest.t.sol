@@ -13,5 +13,13 @@ contract FluxTest is FluxSetupTest {
         assertEq(factory.tierCeilings(i), [0][i]);
     }
 
-    function test_createBondAndTreasury() public {}
+    function test_createBondAndTreasury() public {
+        emit log_address(address(customTreasury));
+        emit log_address(address(customBond));
+        assertEq(address(customTreasury), address(customTreasury));
+    }
+
+    function test_initializeBond() public {
+        assertEq(customBond.terms(), 825000);
+    }
 }
