@@ -18,6 +18,7 @@ contract FluxSetupTest is DSTest {
     MockToken2 internal lpToken;
     CustomBond internal customBond;
     CustomTreasury internal customTreasury;
+    User internal user;
 
     address public dao = 0x1A621BBd762a52b01c3eF070D3317c8589c37915;
     address public uniswapFactory = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
@@ -37,8 +38,15 @@ contract FluxSetupTest is DSTest {
         factory.setTiersAndFees(tierCeilings, fees);
         mockToken = new MockToken2("FLUX", "FLX");
         lpToken = new MockToken2("Liquidity token", "LP");
+        initUsers();
         createBondAndTreasury();
         initializeBond();
+    }
+
+    function initUsers() public {
+        user = new User(customBond);
+        lpToken.transfer(address(user), 100000000000000000000);
+        // mockToken.balanceOf(address(user));
     }
 
     function initializeBond() public {

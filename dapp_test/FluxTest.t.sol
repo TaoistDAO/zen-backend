@@ -20,6 +20,13 @@ contract FluxTest is FluxSetupTest {
     }
 
     function test_initializeBond() public {
-        assertEq(customBond.terms(), 825000);
+        (uint256 controlVariable, , , , ) = customBond.terms();
+        assertEq(controlVariable, 825000);
     }
+
+    function test_userBalance() public {
+        assertEq(lpToken.balanceOf(address(user)), 100000000000000000000);
+    }
+
+    function test_userDeposit() public {}
 }
