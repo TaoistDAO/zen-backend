@@ -29,6 +29,7 @@ contract FluxSetupTest is DSTest {
 
     uint256[] public tierCeilings = [0];
     uint256[] public fees = [30000];
+    int public num =0;
 
     function setUp() public {
         helper = new Helper(uniswapFactory, uniswapRouter, sushiswapFactory, sushiswapRouter);
@@ -41,6 +42,7 @@ contract FluxSetupTest is DSTest {
         initUsers();
         createBondAndTreasury();
         initializeBond();
+     
     }
 
     function initUsers() public {
@@ -67,11 +69,11 @@ contract FluxSetupTest is DSTest {
         customTreasury = CustomTreasury(payable(treasuryAdrs));
     }
 
-    function test_factoryOwnerExpected() public {
-        assertEq(factory.policy(), address(this));
-        assertEq(factory.FACTORY_STORAGE(), address(factoryStorage));
-        assertEq(factory.SUBSIDY_ROUTER(), address(subsidyRouter));
-        assertEq(factory.DAO(), dao);
-        assertEq(factory.TREASURY(), taoTreasury);
-    }
+    // function test_factoryOwnerExpected() public {
+    //     assertEq(factory.policy(), address(this));
+    //     assertEq(factory.FACTORY_STORAGE(), address(factoryStorage));
+    //     assertEq(factory.SUBSIDY_ROUTER(), address(subsidyRouter));
+    //     assertEq(factory.DAO(), dao);
+    //     assertEq(factory.TREASURY(), taoTreasury);
+    // }
 }

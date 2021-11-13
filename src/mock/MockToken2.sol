@@ -13,7 +13,7 @@ contract MockToken2 {
 
     string public name;
     string public symbol;
-    uint256 public totalSupply = 500000000000000000000000; // 500,000 tokens
+    uint256 public totalSupply = 100000000000000000000000; // 500,000 tokens
     uint8 public decimals = 18;
 
     event Transfer(address indexed _from, address indexed _to, uint256 _value);
