@@ -39,15 +39,17 @@ contract FluxSetupTest is DSTest {
         factory.setTiersAndFees(tierCeilings, fees);
         mockToken = new MockToken2("FLUX", "FLX",18 ,100000000000000000000000);
         lpToken = new MockToken2("Liquidity token", "LP",18, 100000000000000000000000);
-        initUsers();
         createBondAndTreasury();
         initializeBond();
+        initUsers();
+
+
      
     }
 
     function initUsers() public {
-        user = new User(customBond);
-        lpToken.transfer(address(user), 100000000000000000000);
+        user = new User(customBond, lpToken);
+        lpToken.transfer(address(user), 3300000000000000000);
         // mockToken.balanceOf(address(user));
     }
 
@@ -67,6 +69,9 @@ contract FluxSetupTest is DSTest {
         (treasuryAdrs, bondAdrs) = factory.createBondAndTreasury(address(mockToken), address(lpToken), address(this));
         customBond = CustomBond(payable(bondAdrs));
         customTreasury = CustomTreasury(payable(treasuryAdrs));
+
+        //transfer payout tokens to treasury
+        mockToken.transfer(treasuryAdrs,10000000000000000000000); //trasfer 10,000 tokens to treasury
     }
 
     // function test_factoryOwnerExpected() public {

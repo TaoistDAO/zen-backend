@@ -18,6 +18,9 @@ contract FluxTest is FluxSetupTest {
         // emit log_address(address(customBond));
         assertEq(address(customTreasury), address(customTreasury));
     }
+    function test_treasuryHasPayoutTokenFunds() public {
+        assertEq(mockToken.balanceOf(address(customTreasury)),10000000000000000000000);
+    }
 
     function test_initializeBond() public {
         (uint256 controlVariable, , , , ) = customBond.terms();
@@ -43,13 +46,15 @@ contract FluxTest is FluxSetupTest {
     }
 
     function test_userBalance() public {
-        assertEq(lpToken.balanceOf(address(user)), 100000000000000000000);
+        assertEq(lpToken.balanceOf(address(user)), 3300000000000000000);
     }
 
     function test_userDeposit() public {
-        // user.deposit();
-        //   uint256 _amount,
-        // uint256 _maxPrice,
-        // address _depositor
+        uint256 lpDepositAmount = 330000000000000000;
+        uint256 maxDepositAmount = 340000000000000000;
+        
+        user.deposit(lpDepositAmount,maxDepositAmount,address(user));
+        
+        
     }
 }
