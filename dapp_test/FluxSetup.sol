@@ -37,8 +37,8 @@ contract FluxSetupTest is DSTest {
         subsidyRouter = new SubsidyRouter();
         factory = new Factory(taoTreasury, address(factoryStorage), address(subsidyRouter), dao, address(helper));
         factory.setTiersAndFees(tierCeilings, fees);
-        mockToken = new MockToken2("FLUX", "FLX");
-        lpToken = new MockToken2("Liquidity token", "LP");
+        mockToken = new MockToken2("FLUX", "FLX",18 ,100000000000000000000000);
+        lpToken = new MockToken2("Liquidity token", "LP",18, 100000000000000000000000);
         initUsers();
         createBondAndTreasury();
         initializeBond();

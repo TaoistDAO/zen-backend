@@ -13,7 +13,7 @@ contract MockToken2 {
 
     string public name;
     string public symbol;
-    uint256 public totalSupply = 100000000000000000000000; // 500,000 tokens
+    uint256 public totalSupply;// = 100000000000000000000000; // 100,000 tokens
     uint8 public decimals = 18;
 
     event Transfer(address indexed _from, address indexed _to, uint256 _value);
@@ -23,9 +23,11 @@ contract MockToken2 {
     mapping(address => uint256) public balanceOf;
     mapping(address => mapping(address => uint256)) public allowance;
 
-    constructor(string memory _name, string memory _symbol) {
+    constructor(string memory _name, string memory _symbol,uint8 _decimals, uint256 _totalSupply) {
         name = _name;
         symbol = _symbol;
+        totalSupply = _totalSupply;
+        decimals = _decimals;
         balanceOf[msg.sender] = totalSupply;
     }
 

@@ -28,7 +28,9 @@ contract FluxTest is FluxSetupTest {
         int discount = 100 - ((int(bondPrice) / int(marketPrice)) * 100);
         uint256 valueOfLpToken = customTreasury.valueOfToken(address(lpToken), bondPrice);
         uint256 payout = customBond.payoutFor(valueOfLpToken);
-
+    
+        emit log_string("debt ratio: ");
+        emit log_uint(customBond.debtRatio());
         emit log_string("bond price: ");
         emit log_uint(customBond.bondPrice());
         emit log_string("marketPrice : ");
@@ -44,5 +46,10 @@ contract FluxTest is FluxSetupTest {
         assertEq(lpToken.balanceOf(address(user)), 100000000000000000000);
     }
 
-    function test_userDeposit() public {}
+    function test_userDeposit() public {
+        // user.deposit();
+        //   uint256 _amount,
+        // uint256 _maxPrice,
+        // address _depositor
+    }
 }
