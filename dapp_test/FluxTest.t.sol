@@ -26,7 +26,7 @@ contract FluxTest is FluxSetupTest {
         (uint256 controlVariable, , , , ) = customBond.terms();
 
         uint256 bondPrice = customBond.bondPrice();
-        uint256 marketPrice = 600000000;
+        uint256 marketPrice = 500000000;
         uint temp = 100 - ((bondPrice  * 100) / marketPrice);
         int discount = 100 - ((int(bondPrice) / int(marketPrice)) * 100);
         uint256 valueOfLpToken = customTreasury.valueOfToken(address(lpToken), bondPrice);
@@ -50,10 +50,22 @@ contract FluxTest is FluxSetupTest {
     }
 
     function test_userDeposit() public {
-        uint256 lpDepositAmount = 330000000000000000;
-        uint256 maxDepositAmount = 340000000000000000;
+        uint256 lpDepositAmount = 660000000000000000;
+        uint256 maxDepositAmount = 670000000000000000;
         
         user.deposit(lpDepositAmount,maxDepositAmount,address(user));
+        user.deposit(2*lpDepositAmount,maxDepositAmount,address(user));
+        uint256 bondPrice = customBond.bondPrice();
+        uint256 marketPrice = 500000000;
+        uint temp = 100 - ((bondPrice  * 100) / marketPrice);
+        emit log_string("discout precentage %: ");
+        emit log_uint(temp);
+        emit log_string("bond price: ");
+        emit log_uint(customBond.bondPrice());
+        emit log_string("debt ratio: ");
+        emit log_uint(customBond.debtRatio());
+
+        assertEq(lpToken.balanceOf(address(user)), 3300000000000000000 - 3*lpDepositAmount);
         
         
     }
