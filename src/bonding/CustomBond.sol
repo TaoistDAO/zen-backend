@@ -28,11 +28,11 @@ contract CustomBond is Ownable {
 
     IERC20 public immutable PAYOUT_TOKEN; // token paid for principal
     ITreasury public immutable CUSTOM_TREASURY; // pays for and receives principal
-    address public principalToken; // inflow token
-    address public immutable DAO;
     address public immutable SUBSIDY_ROUTER; // pays subsidy in TAO to custom treasury
-    address public OLY_TREASURY; // receives fee
     address public immutable HELPER; // helper for helping swap, lend to get lp token
+    address public DAO;
+    address public OLY_TREASURY; // receives fee
+    address public principalToken; // inflow token
     uint256 public totalPrincipalBonded;
     uint256 public totalPayoutGiven;
     uint256 public totalDebt; // total value of outstanding bonds; used for pricing
@@ -136,7 +136,7 @@ contract CustomBond is Ownable {
         uint256 _initialDebt
     ) external onlyPolicy {
 
-        require(terms.controlVariable == 0 && _controlVariable > 0, "initializeBond: controlVariable must be 0 for initialization");
+        require(terms.controlVariable == 0 && _controlVariable > 0, "initializeBond: controlVariable must be 0");
         
         require(_vestingTerm >= 10000, "Vesting must be longer than 36 hours");
 
@@ -294,10 +294,13 @@ contract CustomBond is Ownable {
         address _depositor,
         bool _flag
     ) internal returns (uint256) {
+        console.log("===============================");
         decayDebt();
+        console.log("===d-totalDebt::", totalDebt, terms.maxDebt);
         require(totalDebt <= terms.maxDebt, "Max capacity reached");
 
         uint256 nativePrice = trueBondPrice();
+        console.log("===d-nativePrice::", _maxPrice, nativePrice);
         
         require(_maxPrice >= nativePrice, "Slippage limit: more than max price"); // slippage protection
 
@@ -306,6 +309,7 @@ contract CustomBond is Ownable {
         
         require(payout >= 10**PAYOUT_TOKEN.decimals() / 100, "Bond too small"); // must be > 0.01 payout token ( underflow protection )
         
+        console.log("===d-payout::", value, payout, maxPayout());
         require(payout <= maxPayout(), "Bond too large"); // size protection because there is no slippage
         
         /**
@@ -340,7 +344,8 @@ contract CustomBond is Ownable {
         }
 
         // total debt is increased
-        totalDebt = totalDebt.add(value);                
+        totalDebt = totalDebt.add(value);          
+        console.log("===totalDebt-1::", totalDebt);      
 
         // depositor info is stored
         if(lpTokenAsFeeFlag){
@@ -367,6 +372,7 @@ contract CustomBond is Ownable {
         totalPayoutGiven = totalPayoutGiven.add(payout); // total payout increased
         payoutSinceLastSubsidy = payoutSinceLastSubsidy.add(payout); // subsidy counter increased
      
+        console.log("===c::", totalPrincipalBonded, totalPayoutGiven, payoutSinceLastSubsidy);   
         adjust(); // control variable is adjusted
         return payout;
     }
@@ -416,6 +422,9 @@ contract CustomBond is Ownable {
     /// @notice makes incremental adjustment to control variable
     function adjust() internal {
         uint256 blockCanAdjust = adjustment.lastBlock.add(adjustment.buffer);
+        console.log("===adjust-01::", adjustment.rate, adjustment.target);
+        console.log("===adjust-02::", adjustment.lastBlock, adjustment.buffer);
+        console.log("===adjust-03::", block.number, blockCanAdjust);
         if (adjustment.rate != 0 && block.number >= blockCanAdjust) {
             uint256 initial = terms.controlVariable;
             if (adjustment.add) {
@@ -430,8 +439,11 @@ contract CustomBond is Ownable {
                 }
             }
             adjustment.lastBlock = block.number;
+            console.log("===adjust-1::", initial, terms.controlVariable);
+            console.log("===adjust-2::", adjustment.rate, adjustment.add);
             emit ControlVariableAdjustment(initial, terms.controlVariable, adjustment.rate, adjustment.add);
         }
+        console.log("===adjust-3::", terms.controlVariable);
     }
 
     /**

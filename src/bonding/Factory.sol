@@ -7,6 +7,7 @@ import "../types/Ownable.sol";
 import "../libraries/SafeMath.sol";
 import "./CustomBond.sol";
 import "./CustomTreasury.sol";
+import "./Fees.sol";
 import "../interfaces/IFactoryStorage.sol";
 
 contract Factory is Ownable {    
@@ -15,33 +16,28 @@ contract Factory is Ownable {
     address immutable public TREASURY;
     address immutable public FACTORY_STORAGE;
     address immutable public SUBSIDY_ROUTER;
-    address immutable public DAO;
     address immutable public HELPER;
-    
-    uint256[] public tierCeilings; 
-    uint256[] public fees;
+    address immutable public FEES;
 
     event BondCreation(address treasury, address bond, address _initialOwner);
-
-    event FeesAndTierCeilings(uint256[] tierCeilings, uint256[] fees);
 
     constructor(
         address _treasury,
         address _factoryStorage,
         address _subsidyRouter,
-        address _dao,
-        address _helper
+        address _helper,
+        address _fees
     ) {
-        require(_treasury != address(0), "Factory: treasury must not be zero address");
+        require(_treasury != address(0), "Factory: treasury bad address");
         TREASURY = _treasury;
-        require(_factoryStorage != address(0), "Factory: factoryStorage must not be zero address");
+        require(_factoryStorage != address(0), "Factory: factoryStorage bad address");
         FACTORY_STORAGE = _factoryStorage;
-        require(_subsidyRouter != address(0), "Factory: subsidyRouter must not be zero address");
+        require(_subsidyRouter != address(0), "Factory: subsidyRouter bad address");
         SUBSIDY_ROUTER = _subsidyRouter;
-        require(_dao != address(0), "Factory: dao must not be zero address");
-        DAO = _dao;
-        require(_helper != address(0), "Factory: helper must not be zero address");
+        require(_helper != address(0), "Factory: helper bad address");
         HELPER = _helper;
+        require(_fees != address(0), "Factory: Fees bad address");
+        FEES = _fees;
     }
 
     /* ======== POLICY FUNCTIONS ======== */
@@ -59,6 +55,11 @@ contract Factory is Ownable {
         address _principleToken,
         address _initialOwner
     ) external returns (address _treasury, address _bond) {
+
+        address dao = Fees(FEES).DAO();
+        uint256[] memory fees = Fees(FEES).getFees();
+        uint256[] memory tierCeilings = Fees(FEES).getTierCeilings();
+
         require(fees.length > 0, "createBondAndTreasury: fees must be setup");
 
         CustomTreasury customTreasury = new CustomTreasury(_payoutToken, _initialOwner);
@@ -69,7 +70,7 @@ contract Factory is Ownable {
             TREASURY, 
             SUBSIDY_ROUTER, 
             _initialOwner, 
-            DAO, 
+            dao, 
             HELPER,
             tierCeilings, 
             fees
@@ -103,6 +104,11 @@ contract Factory is Ownable {
         address _customTreasury,
         address _initialOwner
     ) external returns (address _treasury, address _bond) {
+        
+        address dao = Fees(FEES).DAO();
+        uint256[] memory fees = Fees(FEES).getFees();
+        uint256[] memory tierCeilings = Fees(FEES).getTierCeilings();
+
         require(fees.length > 0, "createBond: fees must be setup");
 
         CustomBond bond = new CustomBond(
@@ -112,7 +118,7 @@ contract Factory is Ownable {
             _customTreasury, 
             SUBSIDY_ROUTER, 
             _initialOwner, 
-            DAO, 
+            dao, 
             HELPER,
             tierCeilings, 
             fees
@@ -132,29 +138,4 @@ contract Factory is Ownable {
             );
     }
 
-    /**
-     *  @notice set fee for creating bond
-     *  @param _tierCeilings uint[]
-     *  @param _fees uint[]
-     */
-    function setTiersAndFees(
-        uint256[] calldata _tierCeilings, 
-        uint256[] calldata _fees
-    ) external onlyPolicy {
-        require(_tierCeilings.length == _fees.length, "setTiersAndFees: tier length and fee length must be same");
-
-        uint256 feeSum = 0;
-        for (uint256 i; i < _fees.length; i++) {
-            feeSum = feeSum.add(_fees[i]);
-        }
-        
-        require(feeSum > 0, "setTiersAndFees: fee must greater than 0");
-
-        for (uint256 i; i < _fees.length; i++) {
-            tierCeilings.push(_tierCeilings[i]);
-            fees.push(_fees[i]);
-        }
-
-        emit FeesAndTierCeilings(_tierCeilings, _fees);
-    }
 }

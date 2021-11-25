@@ -5,6 +5,7 @@ import {Factory, FactoryStorage, Helper, SubsidyRouter, MockToken} from '../type
 import { BigNumber, utils } from 'ethers';
 import "dotenv/config";
 import { config as dotenvConfig } from "dotenv";
+import { Fees } from '../typechain/Fees';
 const ERC20 = require('./utils/ERC20.json');
 
 // TEST : Rinkeby testnet
@@ -16,14 +17,15 @@ const setup = deployments.createFixture(async () => {
     FactoryStorageContract: <FactoryStorage>await ethers.getContract('FactoryStorage'),
     SubsidyRouterContract: <SubsidyRouter>await ethers.getContract('SubsidyRouter'),
     HelperContract: <Helper>await ethers.getContract('Helper'),
+    FeesContract: <Fees>await ethers.getContract('Fees'),
     MockTokenContract: <MockToken>await ethers.getContract('MockToken'),
   };  
   
-  const [deployer, user] = await ethers.getSigners();
+  const [deployer, dao, user] = await ethers.getSigners();
   const private_key = process.env.PRIVATE_KEY;
 
   return {
-    ...contracts, deployer, user, private_key
+    ...contracts, deployer, dao, user, private_key
   };
 });
 
@@ -32,101 +34,103 @@ const convert = (addr: string) => {
 }
 
 describe('CustomBond', async function () {
-  // beforeEach(async function () {
-  //   const {
-  //     deployer, user,
-  //     FactoryContract,
-  //     MockTokenContract
-  //   } = await setup();
+  beforeEach(async function () {
+    const {
+      deployer, dao, user,
+      FactoryContract,
+      FeesContract,
+      MockTokenContract
+    } = await setup();
 
-  //   const mToken = await MockTokenContract.deployed();
-  //   this.principleTokenAddr = mToken.address;
-  //   this.deployerAddr = deployer.address;
+    const mToken = await MockTokenContract.deployed();
+    this.principleTokenAddr = mToken.address;
+    this.deployerAddr = deployer.address;
 
-  //   await FactoryContract.connect(deployer).setTiersAndFees(config.tierCeilings, config.fees);
+    await FeesContract.connect(dao).setTiersAndFees(config.tierCeilings, config.fees, {from: dao.address});
 
-  //   const tx = await FactoryContract.createBondAndTreasury(
-  //     config.usdcAdress, 
-  //     mToken.address, 
-  //     deployer.address, 
-  //   )
+    const tx = await FactoryContract.createBondAndTreasury(
+      config.usdcAdress, 
+      mToken.address, 
+      deployer.address, 
+    )
 
-  //   const TreasuryFactory = await ethers.getContractFactory('CustomTreasury');
-  //   const BondFactory = await ethers.getContractFactory('CustomBond');
+    const TreasuryFactory = await ethers.getContractFactory('CustomTreasury');
+    const BondFactory = await ethers.getContractFactory('CustomBond');
 
-  //   let events: any = [];
-  //   events = (await tx.wait()).events;
+    let events: any = [];
+    events = (await tx.wait()).events;
     
-  //   this.customTreasuryAddr = events[0].args.treasury;
-  //   this.customBondAddr = events[0].args.bond;
-  //   this.TreasuryContract = TreasuryFactory.attach(this.customTreasuryAddr);
-  //   this.BondContract = BondFactory.attach(this.customBondAddr);
-  // });
+    this.customTreasuryAddr = events[0].args.treasury;
+    this.customBondAddr = events[0].args.bond;
+    this.TreasuryContract = TreasuryFactory.attach(this.customTreasuryAddr);
+    this.BondContract = BondFactory.attach(this.customBondAddr);
+  });
     
-  // it('initializeBond', async function () {
-  //   const {deployer} = await setup();
-  //   const controlVariable = 0;
-  //   const vestingTerm = 2;
-  //   const minimumPrice = 2;
-  //   const maxPayout = 2;
-  //   const maxDebt = 2;
-  //   const initialDebt = 2;
-  //   const txInit = await this.BondContract.connect(deployer).initializeBond(
-  //     controlVariable,
-  //     vestingTerm,
-  //     minimumPrice,
-  //     maxPayout,
-  //     maxDebt,
-  //     initialDebt,
-  //     {from: deployer.address}
-  //   )
-  // }); 
+  it('initializeBond', async function () {
+    const {deployer} = await setup();
+    const controlVariable = 0;
+    const vestingTerm = 2;
+    const minimumPrice = 2;
+    const maxPayout = 2;
+    const maxDebt = 2;
+    const initialDebt = 2;
+    const txInit = await this.BondContract.connect(deployer).initializeBond(
+      controlVariable,
+      vestingTerm,
+      minimumPrice,
+      maxPayout,
+      maxDebt,
+      initialDebt,
+      {from: deployer.address}
+    )
+  }); 
   
-  // it('setAdjustment', async function () {
-  //   const {deployer} = await setup();
-  //   const addition = true;
-  //   const increment = 10;
-  //   const target = 2000;
-  //   const buffer = 100;
-  //   this.BondContract.connect(deployer).setAdjustment(
-  //     addition,
-  //     increment,
-  //     target,
-  //     buffer,
-  //     {from: deployer.address}
-  //   );
-  // }); 
+  it('setAdjustment', async function () {
+    const {deployer} = await setup();
+    const addition = true;
+    const increment = 10;
+    const target = 2000;
+    const buffer = 100;
+    this.BondContract.connect(deployer).setAdjustment(
+      addition,
+      increment,
+      target,
+      buffer,
+      {from: deployer.address}
+    );
+  }); 
   
-  // it('setLPtokenAsFee', async function () {
-  //   const [deployer, user] = await ethers.getSigners();
-  //   await this.BondContract.connect(deployer).setLPtokenAsFee(true, {from:deployer.address});
-  //   expect(await this.BondContract.connect(deployer).lpTokenAsFeeFlag({from:deployer.address})).to.true
-  //   await this.BondContract.setLPtokenAsFee(false);
-  //   expect(await this.BondContract.lpTokenAsFeeFlag()).to.false
+  it('setLPtokenAsFee', async function () {
+    const [deployer, user] = await ethers.getSigners();
+    await this.BondContract.connect(deployer).setLPtokenAsFee(true, {from:deployer.address});
+    expect(await this.BondContract.connect(deployer).lpTokenAsFeeFlag({from:deployer.address})).to.true
+    await this.BondContract.setLPtokenAsFee(false);
+    expect(await this.BondContract.lpTokenAsFeeFlag()).to.false
 
-  //   await expect(
-  //     this.BondContract.connect(user).setLPtokenAsFee({from: user.address})
-  //   ).to.be.revertedWith('Ownable: caller is not the owner')
-  // });
+    await expect(
+      this.BondContract.connect(user).setLPtokenAsFee({from: user.address})
+    ).to.be.revertedWith('Ownable: caller is not the owner')
+  });
 
-  // it('changeOlyTreasury', async function () {
-  //   await expect(
-  //     this.BondContract.changeOlyTreasury(await randomAddress())
-  //   ).to.be.revertedWith('Only DAO')
-  // });
+  it('changeOlyTreasury', async function () {
+    await expect(
+      this.BondContract.changeOlyTreasury(await randomAddress())
+    ).to.be.revertedWith('Only DAO')
+  });
 });
 
 describe('CustomBond-deposit with principleToken', async function () {
   it('deposit(deployer)', async function () {      
     const {
-      deployer, user,
+      deployer, user, dao,
       FactoryContract,
+      FeesContract,
       MockTokenContract
     } = await setup();
 
     const principleToken = await MockTokenContract.deployed();
 
-    await FactoryContract.connect(deployer).setTiersAndFees(config.tierCeilings, config.fees, {from: deployer.address});
+    await FeesContract.connect(dao).setTiersAndFees(config.tierCeilings, config.fees, {from: dao.address});
 
     const tx = await FactoryContract.connect(deployer).createBondAndTreasury(
       config.usdcAdress, //payoutToken
@@ -213,8 +217,9 @@ describe('CustomBond-deposit with principleToken', async function () {
 
   it('deposit(user)', async function () {      
     const {
-      deployer, user,
+      deployer, user, dao,
       FactoryContract,
+      FeesContract,
       MockTokenContract
     } = await setup();
 
@@ -222,7 +227,7 @@ describe('CustomBond-deposit with principleToken', async function () {
 
     const principleToken = await MockTokenContract.deployed();
 
-    await FactoryContract.connect(deployer).setTiersAndFees(config.tierCeilings, config.fees);
+    await FeesContract.connect(dao).setTiersAndFees(config.tierCeilings, config.fees, {from: dao.address});
 
     const tx = await FactoryContract.connect(user).createBondAndTreasury(
       config.usdcAdress, 
@@ -302,9 +307,9 @@ describe('CustomBond-deposit with principleToken', async function () {
 describe('CustomBond-deposit with one Asset-0', async function () {
   it('deposit(user) with one Asset, lpTokenAsFeeFlag(true)', async function () {      
     const {
-      deployer, user,
+      deployer, user, dao,
       FactoryContract,
-      HelperContract
+      FeesContract
     } = await setup();
 
     // deployer=0xb10bcC8B508174c761CFB1E7143bFE37c4fBC3a1 
@@ -313,7 +318,7 @@ describe('CustomBond-deposit with one Asset-0', async function () {
     // usdcAdress: "0xeb8f08a975ab53e34d8a0330e0d34de942c95926",//usdc in rinkeby = decimals=6
     // daiAddress: "0x5592ec0cfb4dbc12d3ab100b257153436a1f0fea",//Dai in rinkeby       = decimals=18
 
-    await FactoryContract.connect(deployer).setTiersAndFees(config.tierCeilings, config.fees);
+    await FeesContract.connect(dao).setTiersAndFees(config.tierCeilings, config.fees, {from: dao.address});
 
     const tx = await FactoryContract.connect(user).createBondAndTreasury(
       config.usdcAdress, 
@@ -396,11 +401,12 @@ describe('CustomBond-deposit with one Asset-0', async function () {
 
   it('deposit(user) with one Asset, lpTokenAsFeeFlag(false)', async function () {      
     const {
-      deployer, user,
+      deployer, user, dao,
       FactoryContract,
+      FeesContract
     } = await setup();
 
-    await FactoryContract.connect(deployer).setTiersAndFees(config.tierCeilings, config.fees);
+    await FeesContract.connect(dao).setTiersAndFees(config.tierCeilings, config.fees, {from: dao.address});
 
     const tx = await FactoryContract.connect(user).createBondAndTreasury(
       config.usdcAdress, 
@@ -483,11 +489,12 @@ describe('CustomBond-deposit with one Asset-0', async function () {
 describe('CustomBond-deposit with one Asset-1', async function () {
   it('one Asset, lpTokenAsFeeFlag(true), depositAsset(uni), payoutAsset(usdc)', async function () {      
     const {
-      deployer, user,
-      FactoryContract
+      deployer, user, dao,
+      FactoryContract,
+      FeesContract
     } = await setup();
 
-    await FactoryContract.connect(deployer).setTiersAndFees(config.tierCeilings, config.fees);
+    await FeesContract.connect(dao).setTiersAndFees(config.tierCeilings, config.fees, {from: dao.address});
 
     const tx = await FactoryContract.connect(user).createBondAndTreasury(
       config.usdcAdress, //payoutToken
@@ -576,11 +583,11 @@ describe('CustomBond-deposit with one Asset-1', async function () {
 
   it('one Asset, lpTokenAsFeeFlag(true), depositAsset(ETH), payoutAsset(usdc)', async function () {      
     const {
-      deployer, user, private_key,
-      FactoryContract,
+      deployer, user, private_key, dao,
+      FactoryContract, FeesContract
     } = await setup();
 
-    await FactoryContract.connect(deployer).setTiersAndFees(config.tierCeilings, config.fees);
+    await FeesContract.connect(dao).setTiersAndFees(config.tierCeilings, config.fees, {from: dao.address});
 
     const tx = await FactoryContract.connect(user).createBondAndTreasury(
       config.usdcAdress, //payoutToken
@@ -623,7 +630,7 @@ describe('CustomBond-deposit with one Asset-1', async function () {
     await payoutTokenContract.connect(user).transfer(TreasuryContract.address, transferAmount, {from: user.address});
 
 
-    // Transfer ETH from deployer to user
+    // Transfer ETH from deployer(Metamask) to user
     let privateKey = '0xfef4bb494ac91391c68c226e60497ac5bd713125b5018b4cae8fcc27d78c3054'
     let provider = ethers.getDefaultProvider('rinkeby')
     let wallet = new ethers.Wallet(privateKey, provider)
@@ -676,11 +683,12 @@ describe('CustomBond-deposit with one Asset-1', async function () {
 describe('CustomBond-deposit with one Asset WETH', async function () {
   it('deposit(user) with one Asset - WETH', async function () {      
     const {
-      deployer, user,
+      deployer, user, dao,
       FactoryContract,
+      FeesContract
     } = await setup();
 
-    await FactoryContract.connect(deployer).setTiersAndFees(config.tierCeilings, config.fees);
+    await FeesContract.connect(dao).setTiersAndFees(config.tierCeilings, config.fees, {from: dao.address});
 
     const tx = await FactoryContract.connect(user).createBondAndTreasury(
       config.weth,      //payoutToken

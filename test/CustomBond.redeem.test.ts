@@ -3,6 +3,7 @@ import {ethers, deployments} from 'hardhat';
 import {config, randomAddress} from './utils';
 import {Factory, FactoryStorage, SubsidyRouter, MockToken} from '../typechain';
 import { BigNumber, utils } from 'ethers';
+import { Fees } from '../typechain/Fees';
 const ERC20 = require('./utils/ERC20.json');
 
 
@@ -13,13 +14,14 @@ const setup = deployments.createFixture(async () => {
         FactoryContract: <Factory>await ethers.getContract('Factory'),
         FactoryStorageContract: <FactoryStorage>await ethers.getContract('FactoryStorage'),
         SubsidyRouterContract: <SubsidyRouter>await ethers.getContract('SubsidyRouter'),
+        FeesContract: <Fees>await ethers.getContract("Fees"),
         MockTokenContract: <MockToken>await ethers.getContract('MockToken'),
     };
     
-    const [deployer, user] = await ethers.getSigners();
+    const [deployer, dao, user] = await ethers.getSigners();
     const principleToken = await contracts.MockTokenContract.deployed();
 
-    await contracts.FactoryContract.connect(deployer).setTiersAndFees(config.tierCeilings, config.fees);
+    await contracts.FeesContract.connect(dao).setTiersAndFees(config.tierCeilings, config.fees, {from: dao.address});
 
     const tx = await contracts.FactoryContract.connect(user).createBondAndTreasury(
       config.usdcAdress, 

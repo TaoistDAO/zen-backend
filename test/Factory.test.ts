@@ -3,6 +3,7 @@ import {ethers, deployments, getUnnamedAccounts} from 'hardhat';
 import {setupUsers, config, randomAddress} from './utils';
 import {Factory, FactoryStorage, SubsidyRouter, MockToken } from '../typechain';
 import { BigNumber, BigNumberish, utils } from 'ethers';
+import { Fees } from '../typechain/Fees';
 const ERC20 = require('./utils/ERC20.json');
 
 // TEST : Rinkeby testnet
@@ -13,14 +14,15 @@ const setup = deployments.createFixture(async () => {
     FactoryContract: <Factory>await ethers.getContract('Factory'),
     FactoryStorageContract: <FactoryStorage>await ethers.getContract('FactoryStorage'),
     SubsidyRouterContract: <SubsidyRouter>await ethers.getContract('SubsidyRouter'),
+    FeesContract: <Fees>await ethers.getContract('Fees'),
     MockTokenContract: <MockToken>await ethers.getContract('MockToken')
   };
   
   
-  const [deployer, user] = await ethers.getSigners();
+  const [deployer, dao, user] = await ethers.getSigners();
   
   return {
-    ...contracts, deployer, user
+    ...contracts, deployer, dao, user
   };
 });
 
@@ -50,12 +52,13 @@ describe('Factory', function () {
   it('createBondAndTreasury', async function () {
     const {
       FactoryContract, 
+      FeesContract,
       MockTokenContract,
-      deployer, user
+      deployer, user, dao
     } = await setup();
     
     const mToken = await MockTokenContract.deployed();
-    await FactoryContract.connect(deployer).setTiersAndFees(config.tierCeilings, config.fees);
+    await FeesContract.connect(dao).setTiersAndFees(config.tierCeilings, config.fees, {from: dao.address});
     const tx = await FactoryContract.connect(user).createBondAndTreasury(
       config.usdcAdress, 
       mToken.address, 
@@ -73,15 +76,16 @@ describe('Factory', function () {
 
   it('createBond', async function () {
     const {
-      deployer, user,
+      deployer, user, dao,
       FactoryContract,
+      FeesContract,
       MockTokenContract
     } = await setup();
 
     const _customTreasury = '0x31F8Cc382c9898b273eff4e0b7626a6987C846E8';
     const mToken = await MockTokenContract.deployed();
 
-    await FactoryContract.connect(deployer).setTiersAndFees(config.tierCeilings, config.fees);
+    await FeesContract.connect(dao).setTiersAndFees(config.tierCeilings, config.fees, {from: dao.address});
 
     const tx = await FactoryContract.connect(user).createBond(
       config.usdcAdress, 

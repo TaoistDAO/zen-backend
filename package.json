@@ -70,8 +70,8 @@
     "fork:rinkeby": "hardhat node --fork https://eth-rinkeby.alchemyapi.io/v2/khT7j5E7O7LBI-Vf53jsKg9epwhAk2uh",
     "run": "hardhat run --network",
     "deploy:rinkeby": "hardhat deploy --network rinkeby",
-    "verify": "hardhat verify --network",
     "verify:rinkeby": "hardhat etherscan-verify --network rinkeby",
+    "verify": "hardhat verify --network",
     "deploy:mainnet": "hardhat deploy --network mainnet",
     "export:mainnet": "hardhat export --network mainnet --export deployments/mainnet.json",
     "verify:mainnet": "hardhat verify --network mainnet"

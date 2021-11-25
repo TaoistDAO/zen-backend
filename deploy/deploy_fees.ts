@@ -1,5 +1,6 @@
 import {HardhatRuntimeEnvironment} from 'hardhat/types';
 import {DeployFunction} from 'hardhat-deploy/types';
+import {config} from '../test/utils';
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const {
@@ -7,18 +8,21 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     ethers: { getSigners },
   } = hre;
 
-  const deployer = (await getSigners())[0];
-  
-  await deploy('MockToken', {
+  const deployer = (await getSigners())[0]; 
+  const dao = (await getSigners())[1]; 
+
+  await deploy('Fees', {
     from: deployer.address,
-    args: ["Mock Token", "sTao", 18],
+    args: [
+      dao.address
+    ],
     log: true,    
     skipIfAlreadyDeployed: true,
-    autoMine: true, // speed up deployment on local network (ganache, hardhat), no effect on live networks
+    autoMine: true
   });
 };
 
-func.id = 'deploy_mock_token'; // id required to prevent reexecution
-func.tags = ['MockToken'];
+func.id = 'deploy_fees';
+func.tags = ['Fees'];
 
 export default func;

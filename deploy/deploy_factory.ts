@@ -12,6 +12,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const factoryStorage = await get('FactoryStorage');
   const subsidyRouter = await get('SubsidyRouter');
   const helper = await get('Helper');
+  const fees = await get('Fees');
   const mockToken = await get('MockToken');
 
   await deploy('Factory', {
@@ -20,8 +21,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       config.treasury, 
       factoryStorage.address, 
       subsidyRouter.address, 
-      config.dao,
-      helper.address
+      helper.address,
+      fees.address
     ],
     log: true,    
     skipIfAlreadyDeployed: true,
@@ -31,6 +32,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 func.id = 'deploy_factory'; // id required to prevent reexecution
 func.tags = ['Factory'];
-func.dependencies = ['FactoryStorage', 'SubsidyRouter', 'Helper', 'MockToken'];
+func.dependencies = ['FactoryStorage', 'SubsidyRouter', 'Helper', 'Fees', 'MockToken'];
 
 export default func;
