@@ -9,8 +9,6 @@ interface IFactoryStorage {
         address _principleToken,
         address _customTreasury,
         address _customBond,
-        address _initialOwner,
-        uint256[] calldata _tierCeilings,
-        uint256[] calldata _fees
+        address _initialOwner
     ) external returns (address _treasury, address _bond);
 }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.7.5;
+pragma experimental ABIEncoderV2;
 
 import "../libraries/SafeMath.sol";
 import "hardhat/console.sol";
@@ -10,9 +11,9 @@ contract Fees {
     
     address public DAO;
 
-    uint256[] public tierCeilings; 
-    uint256[] public fees;
-    
+    uint256[] private tierCeilings; 
+    uint256[] private fees;
+
     event FeesAndTierCeilings(uint256[] tierCeilings, uint256[] fees);
 
     modifier onlyDAO() {
@@ -32,14 +33,14 @@ contract Fees {
         uint256[] calldata _tierCeilings, 
         uint256[] calldata _fees
     ) external onlyDAO {
-        require(_tierCeilings.length == _fees.length, "setTiersAndFees: Bad items");
+        require(_tierCeilings.length == _fees.length, "setTiersAndFees: Bad items length");
 
         uint256 feeSum = 0;
         for (uint256 i; i < _fees.length; i++) {
             feeSum = feeSum.add(_fees[i]);
         }
         
-        require(feeSum > 0, "setTiersAndFees: Bad feeSum");
+        require(feeSum > 0, "setTiersAndFees: Bad fees");
 
         for (uint256 i; i < _fees.length; i++) {
             tierCeilings.push(_tierCeilings[i]);

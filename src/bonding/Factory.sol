@@ -55,11 +55,8 @@ contract Factory is Ownable {
         address _principleToken,
         address _initialOwner
     ) external returns (address _treasury, address _bond) {
-
-        address dao = Fees(FEES).DAO();
+        
         uint256[] memory fees = Fees(FEES).getFees();
-        uint256[] memory tierCeilings = Fees(FEES).getTierCeilings();
-
         require(fees.length > 0, "createBondAndTreasury: fees must be setup");
 
         CustomTreasury customTreasury = new CustomTreasury(_payoutToken, _initialOwner);
@@ -70,10 +67,8 @@ contract Factory is Ownable {
             TREASURY, 
             SUBSIDY_ROUTER, 
             _initialOwner, 
-            dao, 
             HELPER,
-            tierCeilings, 
-            fees
+            FEES
         );
 
         emit BondCreation(address(customTreasury), address(customBond), _initialOwner);
@@ -83,9 +78,7 @@ contract Factory is Ownable {
             _principleToken, 
             address(customTreasury), 
             address(customBond), 
-            _initialOwner, 
-            tierCeilings, 
-            fees
+            _initialOwner
         );
     }
 
@@ -104,11 +97,8 @@ contract Factory is Ownable {
         address _customTreasury,
         address _initialOwner
     ) external returns (address _treasury, address _bond) {
-        
-        address dao = Fees(FEES).DAO();
-        uint256[] memory fees = Fees(FEES).getFees();
-        uint256[] memory tierCeilings = Fees(FEES).getTierCeilings();
 
+        uint256[] memory fees = Fees(FEES).getFees();
         require(fees.length > 0, "createBond: fees must be setup");
 
         CustomBond bond = new CustomBond(
@@ -118,10 +108,8 @@ contract Factory is Ownable {
             _customTreasury, 
             SUBSIDY_ROUTER, 
             _initialOwner, 
-            dao, 
             HELPER,
-            tierCeilings, 
-            fees
+            FEES
         );
 
         emit BondCreation(_customTreasury, address(bond), _initialOwner);
@@ -132,9 +120,7 @@ contract Factory is Ownable {
                 _principleToken,
                 _customTreasury,
                 address(bond),
-                _initialOwner,
-                tierCeilings,
-                fees
+                _initialOwner
             );
     }
 

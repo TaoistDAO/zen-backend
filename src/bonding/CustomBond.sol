@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.7.5;
+pragma experimental ABIEncoderV2;
 
 import "../types/Ownable.sol";
 import "../libraries/SafeMath.sol";
@@ -9,6 +10,7 @@ import "../libraries/FixedPoint.sol";
 import "../interfaces/ITreasury.sol";
 import "../interfaces/IERC20.sol";
 import "../interfaces/IHelper.sol";
+import "./Fees.sol";
 import "hardhat/console.sol";
 
 contract CustomBond is Ownable {
@@ -30,7 +32,7 @@ contract CustomBond is Ownable {
     ITreasury public immutable CUSTOM_TREASURY; // pays for and receives principal
     address public immutable SUBSIDY_ROUTER; // pays subsidy in TAO to custom treasury
     address public immutable HELPER; // helper for helping swap, lend to get lp token
-    address public DAO;
+    address public immutable FEES; // Fees contract
     address public OLY_TREASURY; // receives fee
     address public principalToken; // inflow token
     uint256 public totalPrincipalBonded;
@@ -40,17 +42,11 @@ contract CustomBond is Ownable {
     uint256 public payoutSinceLastSubsidy; // principal accrued since subsidy paid
     Terms public terms; // stores terms for new bonds
     Adjust public adjustment; // stores adjustment to BCV data
-    FeeTiers[] private feeTiers; // stores fee tiers
     bool public lpTokenAsFeeFlag;//
     bool public bondWithOneAssetFlag;
 
     mapping(address => Bond) public bondInfo; // stores bond information for depositors
     
-    struct FeeTiers {
-        uint256 tierCeilings; // principal bonded till next tier
-        uint256 fees; // in ten-thousandths (i.e. 33300 = 3.33%)
-    }
-
     // Info for creating new bonds
     struct Terms {
         uint256 controlVariable; // scaling variable for price
@@ -86,32 +82,25 @@ contract CustomBond is Ownable {
         address _olyTreasury,
         address _subsidyRouter,
         address _initialOwner,
-        address _dao,
         address _helper,
-        uint256[] memory _tierCeilings,
-        uint256[] memory _fees
+        address _fees
     ) {
-        require(_customTreasury != address(0), "Factory: customTreasury must not be zero address");
+        require(_customTreasury != address(0), "Factory: customTreasury bad");
         CUSTOM_TREASURY = ITreasury(_customTreasury);
-        require(_payoutToken != address(0), "Factory: payoutToken must not be zero address");
+        require(_payoutToken != address(0), "Factory: payoutToken bad");
         PAYOUT_TOKEN = IERC20(_payoutToken);
-        require(_principalToken != address(0), "Factory: principalToken must not be zero address");
+        require(_principalToken != address(0), "Factory: principalToken bad");
         principalToken = _principalToken;
-        require(_olyTreasury != address(0), "Factory: olyTreasury must not be zero address");
+        require(_olyTreasury != address(0), "Factory: olyTreasury bad");
         OLY_TREASURY = _olyTreasury;
-        require(_subsidyRouter != address(0), "Factory: subsidyRouter must not be zero address");
+        require(_subsidyRouter != address(0), "Factory: subsidyRouter bad");
         SUBSIDY_ROUTER = _subsidyRouter;
-        require(_initialOwner != address(0), "Factory: initialOwner must not be zero address");
+        require(_initialOwner != address(0), "Factory: initialOwner bad");
         policy = _initialOwner;
-        require(_dao != address(0), "Factory: DAO must not be zero address");
-        DAO = _dao;
-        require(_helper != address(0), "Factory: helper must not be zero address");
+        require(_helper != address(0), "Factory: helper bad");
         HELPER = _helper;
-        require(_tierCeilings.length == _fees.length, "tier length and fee length not the same");
-
-        for (uint256 i; i < _tierCeilings.length; i++) {
-            feeTiers.push(FeeTiers({tierCeilings: _tierCeilings[i], fees: _fees[i]}));
-        }
+        require(_fees != address(0), "Factory: FEES bad");
+        FEES = _fees;
 
         lpTokenAsFeeFlag = true;
     }
@@ -216,7 +205,8 @@ contract CustomBond is Ownable {
      *  @param _olyTreasury uint
      */
     function changeOlyTreasury(address _olyTreasury) external {
-        require(msg.sender == DAO, "changeOlyTreasury: Only DAO can replace OLY_TREASURY");
+        address dao = Fees(FEES).DAO();
+        require(msg.sender == dao, "changeOlyTreasury: Only DAO can replace OLY_TREASURY");
         OLY_TREASURY = _olyTreasury;
     }
 
@@ -294,39 +284,35 @@ contract CustomBond is Ownable {
         address _depositor,
         bool _flag
     ) internal returns (uint256) {
-        console.log("===============================");
+        console.log("================ deposit ===============");
         decayDebt();
-        console.log("===d-totalDebt::", totalDebt, terms.maxDebt);
+        console.log("===totalDebt, terms.maxDebt::", totalDebt, terms.maxDebt);
         require(totalDebt <= terms.maxDebt, "Max capacity reached");
 
         uint256 nativePrice = trueBondPrice();
-        console.log("===d-nativePrice::", _maxPrice, nativePrice);
+        console.log("===maxPrice, nativePrice::", _maxPrice, nativePrice);
         
         require(_maxPrice >= nativePrice, "Slippage limit: more than max price"); // slippage protection
 
         uint256 value = CUSTOM_TREASURY.valueOfToken(_lpAddress, _lpAmount);
         uint256 payout = _payoutFor(value); // payout to bonder is computed
+
+        // must be > 0.01 payout token ( underflow protection )
+        require(payout >= 10**PAYOUT_TOKEN.decimals() / 100, "Bond too small"); 
         
-        require(payout >= 10**PAYOUT_TOKEN.decimals() / 100, "Bond too small"); // must be > 0.01 payout token ( underflow protection )
-        
-        console.log("===d-payout::", value, payout, maxPayout());
+        console.log("===value, payout, maxPayout()::", value, payout, maxPayout());
         require(payout <= maxPayout(), "Bond too large"); // size protection because there is no slippage
         
-        /**
-            principal is transferred in
-            approved and
-            deposited into the treasury, returning (_amount - profit) payout token
-         */
+        // principal is transferred in
+        // approved and deposited into the treasury, returning (_amount - profit) payout token
          if(_flag) {
             IERC20(_lpAddress).safeTransferFrom(msg.sender, address(this), _lpAmount);
          }
 
         // profits are calculated
         uint256 fee;
-        /**
-            principal is been taken as fee
-            and trasfered to dao
-         */
+
+        // principal is been taken as fee and trasfered to dao
         if (lpTokenAsFeeFlag) {
             fee = _lpAmount.mul(currentFluxFee()).div(1e6);
             if (fee != 0) {
@@ -345,7 +331,7 @@ contract CustomBond is Ownable {
 
         // total debt is increased
         totalDebt = totalDebt.add(value);          
-        console.log("===totalDebt-1::", totalDebt);      
+        console.log("===totalDebt after deposit::", totalDebt);      
 
         // depositor info is stored
         if(lpTokenAsFeeFlag){
@@ -372,7 +358,7 @@ contract CustomBond is Ownable {
         totalPayoutGiven = totalPayoutGiven.add(payout); // total payout increased
         payoutSinceLastSubsidy = payoutSinceLastSubsidy.add(payout); // subsidy counter increased
      
-        console.log("===c::", totalPrincipalBonded, totalPayoutGiven, payoutSinceLastSubsidy);   
+        console.log("===totalPrincipalBonded, totalPayoutGiven, payoutSinceLastSubsidy::", totalPrincipalBonded, totalPayoutGiven, payoutSinceLastSubsidy);   
         adjust(); // control variable is adjusted
         return payout;
     }
@@ -422,9 +408,9 @@ contract CustomBond is Ownable {
     /// @notice makes incremental adjustment to control variable
     function adjust() internal {
         uint256 blockCanAdjust = adjustment.lastBlock.add(adjustment.buffer);
-        console.log("===adjust-01::", adjustment.rate, adjustment.target);
-        console.log("===adjust-02::", adjustment.lastBlock, adjustment.buffer);
-        console.log("===adjust-03::", block.number, blockCanAdjust);
+        console.log("===adjustment.rate, adjustment.target::", adjustment.rate, adjustment.target);
+        console.log("===adjustment.lastBlock, adjustment.buffer::", adjustment.lastBlock, adjustment.buffer);
+        console.log("===block.number, blockCanAdjust::", block.number, blockCanAdjust);
         if (adjustment.rate != 0 && block.number >= blockCanAdjust) {
             uint256 initial = terms.controlVariable;
             if (adjustment.add) {
@@ -439,11 +425,11 @@ contract CustomBond is Ownable {
                 }
             }
             adjustment.lastBlock = block.number;
-            console.log("===adjust-1::", initial, terms.controlVariable);
-            console.log("===adjust-2::", adjustment.rate, adjustment.add);
+            console.log("===initial, terms.controlVariable::", initial, terms.controlVariable);
+            console.log("===adjustment.rate, adjustment.add::", adjustment.rate, adjustment.add);
             emit ControlVariableAdjustment(initial, terms.controlVariable, adjustment.rate, adjustment.add);
         }
-        console.log("===adjust-3::", terms.controlVariable);
+        console.log("===terms.controlVariable after adjust::", terms.controlVariable);
     }
 
     /**
@@ -587,10 +573,14 @@ contract CustomBond is Ownable {
      *  @return currentFee_ uint
      */
     function currentFluxFee() public view returns (uint256 currentFee_) {
-        uint256 tierLength = feeTiers.length;
-        for (uint256 i; i < tierLength; i++) {
-            if (totalPrincipalBonded < feeTiers[i].tierCeilings || i == tierLength - 1) {
-                return feeTiers[i].fees;
+        
+        uint256[] memory tierCeilings = Fees(FEES).getTierCeilings();
+        uint256[] memory fees = Fees(FEES).getFees();
+
+        uint256 feesLength = fees.length;
+        for (uint256 i; i < feesLength; i++) {
+            if (totalPrincipalBonded < tierCeilings[i] || i == feesLength - 1) {
+                return fees[i];
             }
         }
     }

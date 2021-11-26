@@ -45,11 +45,11 @@ describe('Whole flow with principleToken', async function () {
     let events: any = [];
     const principleToken = await MockTokenContract.deployed();//decimal=18, usdc decimal=6
 
-    const feesTx = await FeesContract.connect(dao).setTiersAndFees(config.tierCeilings, config.fees, {from: dao.address});
+    let feesTx = await FeesContract.connect(dao).setTiersAndFees(config.tierCeilings, config.fees, {from: dao.address});
     events = (await feesTx.wait()).events; 
     const tierCeilings = events[0].args.tierCeilings;
     const fees = events[0].args.fees;
-    console.log(Number(JSON.stringify(tierCeilings)), Number(JSON.stringify(fees)));
+    console.log("====fees, tierCeilings", Number(tierCeilings[0]), Number(fees[0]));
     expect(Number(config.fees[0])).to.equal(Number(fees[0]));
 
     const tx = await FactoryContract.connect(deployer).createBondAndTreasury(
@@ -155,13 +155,13 @@ describe('Whole flow with principleToken', async function () {
     const deposit_u = Number(BigNumber.from(bondCreatedEvent.deposit))
     const payout_u = Number(BigNumber.from(bondCreatedEvent.payout))
     const expires_u = Number(BigNumber.from(bondCreatedEvent.expires))
-    console.log("====emit-user01::", deposit_u, payout_u, expires_u);
+    console.log("====1 deposit, payout, expires::", deposit_u, payout_u, expires_u);
     expect(Number(amount.mul(2))).to.equal(deposit_u);
     
     bondPriceChangedEvent = events[8].args;
     const internalPrice_u = Number(BigNumber.from(bondPriceChangedEvent.internalPrice))
     const debtRatio_u = Number(BigNumber.from(bondPriceChangedEvent.debtRatio))
-    console.log("====emit-user02::", internalPrice_u, debtRatio_u);
+    console.log("====1 internalPrice, debtRatio::", internalPrice_u, debtRatio_u);
 
 
 
@@ -179,20 +179,31 @@ describe('Whole flow with principleToken', async function () {
     const deposit_u2 = Number(BigNumber.from(bondCreatedEvent.deposit))
     const payout_u2 = Number(BigNumber.from(bondCreatedEvent.payout))
     const expires_u2 = Number(BigNumber.from(bondCreatedEvent.expires))
-    console.log("====emit-user21::", deposit_u2, payout_u2, expires_u2);
+    console.log("====2 deposit, payout, expires::", deposit_u2, payout_u2, expires_u2);
     expect(Number(amount.mul(3))).to.equal(deposit_u2);
     
     bondPriceChangedEvent = events[8].args;
     const internalPrice_u2 = Number(BigNumber.from(bondPriceChangedEvent.internalPrice))
     const debtRatio_u2 = Number(BigNumber.from(bondPriceChangedEvent.debtRatio))
-    console.log("====emit-user22::", internalPrice_u2, debtRatio_u2);
+    console.log("====2 internalPrice, debtRatio::", internalPrice_u2, debtRatio_u2);
 
 
+    
 
-    //========================== user2 deposit
+    //========================== user3 deposit
+    // set fees and feeTiers again
+    const feessss = [20000];
+    const tierCeilingssss = [0];
+    feesTx = await FeesContract.connect(dao).setTiersAndFees(tierCeilingssss, feessss, {from: dao.address});
+    events = (await feesTx.wait()).events; 
+    const tierCeilings_val = events[0].args.tierCeilings;
+    const fees_val = events[0].args.fees;
+    console.log("====again fees, tierCeilings", Number(tierCeilings_val[0]), Number(fees_val[0]));
+
+    // Transfer LP from deployer to user3
     await principleToken.connect(deployer).transfer(user3.address, utils.parseUnits('200', await principleToken.decimals()), {from: deployer.address});
             
-    //Approve(principleToken) to deposit in frontend(user)
+    // Approve(principleToken) to deposit in frontend(user)
     await principleToken.connect(user3).approve(BondContract.address, tokenSupply, {from: user3.address});
         
     // deposit()
@@ -202,14 +213,16 @@ describe('Whole flow with principleToken', async function () {
     const deposit_u3 = Number(BigNumber.from(bondCreatedEvent.deposit))
     const payout_u3 = Number(BigNumber.from(bondCreatedEvent.payout))
     const expires_u3 = Number(BigNumber.from(bondCreatedEvent.expires))
-    console.log("====emit-user31::", deposit_u3, payout_u3, expires_u3);
+    console.log("====3 deposit, payout, expires::", deposit_u3, payout_u3, expires_u3);
     expect(Number(amount.mul(4))).to.equal(deposit_u3);
     
     bondPriceChangedEvent = events[8].args;
     const internalPrice_u3 = Number(BigNumber.from(bondPriceChangedEvent.internalPrice))
     const debtRatio_u3 = Number(BigNumber.from(bondPriceChangedEvent.debtRatio))
-    console.log("====emit-user32::", internalPrice_u3, debtRatio_u3);
+    console.log("====3 internalPrice, debtRatio::", internalPrice_u3, debtRatio_u3);
 
+    const tx_fee = await BondContract.connect(user3).currentFluxFee({from: user3.address});
+    console.log("===================3 currentFluxFee::", Number(tx_fee));
 
 
     //======================================= redeem
@@ -232,8 +245,8 @@ describe('Whole flow with principleToken', async function () {
     const payoutTokenBalanceToUserAfterRedeem = Number(await payoutTokenContract.balanceOf(user3.address));//500000000067203460
     console.log("====AfterRedeem::", payoutTokenBalanceToUserAfterRedeem);
     expect(payout_u3).to.equal(Number(remaining.add(payoutRedeem)));
-    console.log("====redeem01::", recipient, user3.address)
-    console.log("====redeem02::", Number(payoutRedeem), Number(remaining))
+    console.log("====recipient, user3::", recipient, user3.address)
+    console.log("====payoutRedeem, remaining::", Number(payoutRedeem), Number(remaining))
   });
 });
 

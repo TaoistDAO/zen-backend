@@ -11,8 +11,6 @@ contract FactoryStorage is Ownable {
         address _treasuryAddress;
         address _bondAddress;
         address _initialOwner;
-        uint256[] _tierCeilings;
-        uint256[] _fees;
     }
 
     BondDetails[] public bondDetails;
@@ -32,8 +30,6 @@ contract FactoryStorage is Ownable {
         @param _customTreasury address
         @param _customBond address
         @param _initialOwner address
-        @param _tierCeilings uint[]
-        @param _fees uint[]
         @return _treasury address
         @return _bond address
      */
@@ -42,11 +38,8 @@ contract FactoryStorage is Ownable {
         address _principleToken, 
         address _customTreasury, 
         address _customBond, 
-        address _initialOwner, 
-        uint[] calldata _tierCeilings, 
-        uint[] calldata _fees
+        address _initialOwner
     ) external returns(address _treasury, address _bond) {
-        // require(factory == msg.sender, "Not Factory");
 
         indexOfBond[_customBond] = bondDetails.length;
 
@@ -56,9 +49,7 @@ contract FactoryStorage is Ownable {
                 _principleToken: _principleToken,
                 _treasuryAddress: _customTreasury,
                 _bondAddress: _customBond,
-                _initialOwner: _initialOwner,
-                _tierCeilings: _tierCeilings,
-                _fees: _fees
+                _initialOwner: _initialOwner
             })
         );
 
