@@ -3,7 +3,7 @@
 pragma solidity 0.7.5;
 pragma experimental ABIEncoderV2;
 
-import "../types/Ownable.sol";
+import "../types/BondOwnable.sol";
 import "../libraries/SafeMath.sol";
 import "../libraries/SafeERC20.sol";
 import "../libraries/FixedPoint.sol";
@@ -13,7 +13,7 @@ import "../interfaces/IHelper.sol";
 import "./Fees.sol";
 import "hardhat/console.sol";
 
-contract CustomBond is Ownable {
+contract CustomBond is BondOwnable {
     using FixedPoint for *;
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
@@ -40,13 +40,14 @@ contract CustomBond is Ownable {
     uint256 public totalDebt; // total value of outstanding bonds; used for pricing
     uint256 public lastDecay; // reference block for debt decay
     uint256 public payoutSinceLastSubsidy; // principal accrued since subsidy paid
+    uint256 public maxFeeAllowed = 50000; //maximum amount of fee allowed to charged - 5%
     Terms public terms; // stores terms for new bonds
     Adjust public adjustment; // stores adjustment to BCV data
     bool public lpTokenAsFeeFlag;//
     bool public bondWithOneAssetFlag;
 
     mapping(address => Bond) public bondInfo; // stores bond information for depositors
-    
+
     // Info for creating new bonds
     struct Terms {
         uint256 controlVariable; // scaling variable for price
@@ -126,7 +127,7 @@ contract CustomBond is Ownable {
     ) external onlyPolicy {
 
         require(terms.controlVariable == 0 && _controlVariable > 0, "initializeBond: controlVariable must be 0");
-        
+
         require(_vestingTerm >= 10000, "Vesting must be longer than 36 hours");
 
         require(_maxPayout <= 1000, "Payout cannot be above 1 percent");
@@ -163,14 +164,14 @@ contract CustomBond is Ownable {
      *  @param _parameter PARAMETER
      *  @param _input uint
      */
-    function setBondTerms(PARAMETER _parameter, uint256 _input) external onlyPolicy {
-        if (_parameter == PARAMETER.VESTING) {// 0            
+    function setBondTerms(PARAMETER _parameter, uint256 _input) external onlyBondManager {
+        if (_parameter == PARAMETER.VESTING) {// 0
             require(_input >= 10000, "Vesting must be longer than 36 hours");
             terms.vestingTerm = _input;
-        } else if (_parameter == PARAMETER.PAYOUT) {// 1            
+        } else if (_parameter == PARAMETER.PAYOUT) {// 1
             require(_input <= 1000, "Payout cannot be above 1 percent");
             terms.maxPayout = _input;
-        } else if (_parameter == PARAMETER.DEBT) {// 2            
+        } else if (_parameter == PARAMETER.DEBT) {// 2
             terms.maxDebt = _input;
         }
     }
@@ -187,7 +188,7 @@ contract CustomBond is Ownable {
         uint256 _increment,
         uint256 _target,
         uint256 _buffer
-    ) external onlyPolicy {
+    ) external onlyBondManager {
         require(_increment <= terms.controlVariable.mul(30).div(1000), "Increment too large");
         require(_target > 0, "setAdjustment: target greater than 0");
 
@@ -237,12 +238,12 @@ contract CustomBond is Ownable {
     ) external returns (uint256) {
         require(_depositor != address(0), "Invalid address");
 
-        return __deposit(_amount, _maxPrice, principalToken, _depositor, true);        
+        return __deposit(_amount, _maxPrice, principalToken, _depositor, true);
     }
 
     /**
      *  @notice deposit bond with an asset(i.e: USDT)
-     *  @param _depositAmount amount of deposit asset 
+     *  @param _depositAmount amount of deposit asset
      *  @param _depositAsset deposit asset
      *  @param _incomingAsset asset address for swap from deposit asset
      *  @param _depositor address of depositor
@@ -255,13 +256,13 @@ contract CustomBond is Ownable {
         address _incomingAsset,
         address _depositor
     ) external returns (uint256) {
-        require(_depositor != address(0), "depositWithAsset: Invalid depositor");        
+        require(_depositor != address(0), "depositWithAsset: Invalid depositor");
 
         (address lpAddress, uint256 lpAmount) = __lpAddressAndAmount(_depositAmount, _depositAsset, _incomingAsset);
 
         // remain payoutToken is transferred to user
         __transferAssetToCaller(msg.sender, address(PAYOUT_TOKEN));
-        
+
         require(lpAddress != address(0), "depositWithAsset: Invalid lpAddress");
 
         require(lpAmount > 0, "depositWithAsset: Insufficient lpAmount");
@@ -269,10 +270,10 @@ contract CustomBond is Ownable {
         return __deposit(lpAmount, _maxPrice, lpAddress, _depositor, false);
     }
 
-    
+
     /// @notice internal process of deposit()
-    /// @param _lpAmount amount of principleToken 
-    /// @param _maxPrice amount 
+    /// @param _lpAmount amount of principleToken
+    /// @param _maxPrice amount
     /// @param _lpAddress principleToken
     /// @param _depositor address of depositor
     /// @param _flag if deposit(), true and if depositWithAsset(), false
@@ -291,18 +292,18 @@ contract CustomBond is Ownable {
 
         uint256 nativePrice = trueBondPrice();
         console.log("===maxPrice, nativePrice::", _maxPrice, nativePrice);
-        
+
         require(_maxPrice >= nativePrice, "Slippage limit: more than max price"); // slippage protection
 
         uint256 value = CUSTOM_TREASURY.valueOfToken(_lpAddress, _lpAmount);
         uint256 payout = _payoutFor(value); // payout to bonder is computed
 
         // must be > 0.01 payout token ( underflow protection )
-        require(payout >= 10**PAYOUT_TOKEN.decimals() / 100, "Bond too small"); 
-        
+        require(payout >= 10**PAYOUT_TOKEN.decimals() / 100, "Bond too small");
+
         console.log("===value, payout, maxPayout()::", value, payout, maxPayout());
         require(payout <= maxPayout(), "Bond too large"); // size protection because there is no slippage
-        
+
         // principal is transferred in
         // approved and deposited into the treasury, returning (_amount - profit) payout token
          if(_flag) {
@@ -321,35 +322,35 @@ contract CustomBond is Ownable {
         } else {
             fee = payout.mul(currentFluxFee()).div(1e6);
         }
-        
+
         IERC20(_lpAddress).approve(address(CUSTOM_TREASURY), _lpAmount);
         CUSTOM_TREASURY.deposit(_lpAddress, _lpAmount.sub(fee), payout);
 
-        if (!lpTokenAsFeeFlag && fee != 0) { // fee is transferred to dao 
+        if (!lpTokenAsFeeFlag && fee != 0) { // fee is transferred to dao
             PAYOUT_TOKEN.transfer(OLY_TREASURY, fee);
         }
 
         // total debt is increased
-        totalDebt = totalDebt.add(value);          
-        console.log("===totalDebt after deposit::", totalDebt);      
+        totalDebt = totalDebt.add(value);
+        console.log("===totalDebt after deposit::", totalDebt);
 
         // depositor info is stored
         if(lpTokenAsFeeFlag){
-            bondInfo[_depositor] = Bond({ 
+            bondInfo[_depositor] = Bond({
                 payout: bondInfo[_depositor].payout.add(payout),
                 vesting: terms.vestingTerm,
                 lastBlock: block.number,
                 truePricePaid: trueBondPrice()
             });
         } else {
-            bondInfo[_depositor] = Bond({ 
+            bondInfo[_depositor] = Bond({
                 payout: bondInfo[_depositor].payout.add(payout.sub(fee)),
                 vesting: terms.vestingTerm,
                 lastBlock: block.number,
                 truePricePaid: trueBondPrice()
             });
-        }        
-  
+        }
+
         // indexed events are emitted
         emit BondCreated(_lpAmount, payout, block.number.add(terms.vestingTerm));
         emit BondPriceChanged(_bondPrice(), debtRatio());
@@ -357,8 +358,8 @@ contract CustomBond is Ownable {
         totalPrincipalBonded = totalPrincipalBonded.add(_lpAmount); // total bonded increased
         totalPayoutGiven = totalPayoutGiven.add(payout); // total payout increased
         payoutSinceLastSubsidy = payoutSinceLastSubsidy.add(payout); // subsidy counter increased
-     
-        console.log("===totalPrincipalBonded, totalPayoutGiven, payoutSinceLastSubsidy::", totalPrincipalBonded, totalPayoutGiven, payoutSinceLastSubsidy);   
+
+        console.log("===totalPrincipalBonded, totalPayoutGiven, payoutSinceLastSubsidy::", totalPrincipalBonded, totalPayoutGiven, payoutSinceLastSubsidy);
         adjust(); // control variable is adjusted
         return payout;
     }
@@ -366,12 +367,12 @@ contract CustomBond is Ownable {
     /**
      *  @notice redeem bond for user
      *  @return uint
-     */ 
+     */
     function redeem(address _depositor) external returns (uint) {
         Bond memory info = bondInfo[_depositor];
-        
+
         uint percentVested = percentVestedFor(_depositor); // (blocks since last interaction / vesting term remaining)
-        
+
         if (percentVested >= 10000) { // if fully vested
             delete bondInfo[_depositor]; // delete user info
             emit BondRedeemed(_depositor, info.payout, 0); // emit bond data
@@ -573,14 +574,19 @@ contract CustomBond is Ownable {
      *  @return currentFee_ uint
      */
     function currentFluxFee() public view returns (uint256 currentFee_) {
-        
+
         uint256[] memory tierCeilings = Fees(FEES).getTierCeilings();
         uint256[] memory fees = Fees(FEES).getFees();
 
         uint256 feesLength = fees.length;
         for (uint256 i; i < feesLength; i++) {
             if (totalPrincipalBonded < tierCeilings[i] || i == feesLength - 1) {
-                return fees[i];
+                if(fees[i] > maxFeeAllowed){
+                    return maxFeeAllowed;
+                }else{
+                    return fees[i];
+                }
+
             }
         }
     }
@@ -598,7 +604,7 @@ contract CustomBond is Ownable {
         uint256 _depositAmount,
         address _depositAsset,
         address _incomingAsset
-    ) public payable returns (address lpAddress_, uint256 lpAmount_) {      
+    ) public payable returns (address lpAddress_, uint256 lpAmount_) {
 
         if(_depositAsset == address(0)) {//ETH
             payable(address(HELPER)).transfer(address(this).balance);
@@ -608,10 +614,10 @@ contract CustomBond is Ownable {
             IERC20(_depositAsset).approve(address(HELPER), _depositAmount);
         }
 
-        bytes memory swapArgs = abi.encode(_depositAmount, _depositAsset, address(PAYOUT_TOKEN), _incomingAsset);        
+        bytes memory swapArgs = abi.encode(_depositAmount, _depositAsset, address(PAYOUT_TOKEN), _incomingAsset);
 
-        (lpAddress_, lpAmount_) = IHelper(HELPER).swapForDeposit(swapArgs);    
+        (lpAddress_, lpAmount_) = IHelper(HELPER).swapForDeposit(swapArgs);
 
-        emit LPAdded(lpAddress_, lpAmount_);      
+        emit LPAdded(lpAddress_, lpAmount_);
     }
 }
