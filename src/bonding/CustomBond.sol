@@ -98,6 +98,7 @@ contract CustomBond is BondOwnable {
         SUBSIDY_ROUTER = _subsidyRouter;
         require(_initialOwner != address(0), "Factory: initialOwner bad");
         policy = _initialOwner;
+        bondManager = _initialOwner;
         require(_helper != address(0), "Factory: helper bad");
         HELPER = _helper;
         require(_fees != address(0), "Factory: FEES bad");
