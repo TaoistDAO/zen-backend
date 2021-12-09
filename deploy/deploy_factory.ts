@@ -9,7 +9,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   } = hre;
 
   const deployer = (await getSigners())[0]; 
-  // const factoryStorage = await get('FactoryStorage');
   const subsidyRouter = await get('SubsidyRouter');
   const helper = await get('Helper');
   const fees = await get('Fees');
@@ -19,7 +18,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     from: deployer.address,
     args: [
       config.treasury, 
-      // factoryStorage.address, 
       subsidyRouter.address, 
       helper.address,
       fees.address
