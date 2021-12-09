@@ -1,7 +1,7 @@
 import {expect} from './chai-setup';
 import {ethers, deployments} from 'hardhat';
 import {setupUsers, config, randomAddress} from './utils';
-import {Factory, FactoryStorage, Helper, SubsidyRouter, MockToken} from '../typechain';
+import {Factory, Helper, SubsidyRouter, MockToken} from '../typechain';
 import { BigNumber, utils } from 'ethers';
 import "dotenv/config";
 import { config as dotenvConfig } from "dotenv";
@@ -14,7 +14,6 @@ const setup = deployments.createFixture(async () => {
   
   const contracts = {
     FactoryContract: <Factory>await ethers.getContract('Factory'),
-    FactoryStorageContract: <FactoryStorage>await ethers.getContract('FactoryStorage'),
     SubsidyRouterContract: <SubsidyRouter>await ethers.getContract('SubsidyRouter'),
     HelperContract: <Helper>await ethers.getContract('Helper'),
     FeesContract: <Fees>await ethers.getContract('Fees'),

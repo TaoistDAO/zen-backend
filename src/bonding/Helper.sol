@@ -8,7 +8,6 @@ import "../libraries/SafeERC20.sol";
 import "../interfaces/IUniswapV2Router2.sol";
 import "../interfaces/IUniswapV2Factory.sol";
 import "../interfaces/IHelper.sol";
-import "hardhat/console.sol";
 
 contract Helper is IHelper {
     

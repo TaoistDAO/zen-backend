@@ -11,7 +11,6 @@ import "../interfaces/ITreasury.sol";
 import "../interfaces/IERC20.sol";
 import "../interfaces/IHelper.sol";
 import "./Fees.sol";
-import "hardhat/console.sol";
 
 contract CustomBond is BondOwnable {
     using FixedPoint for *;
@@ -286,13 +285,12 @@ contract CustomBond is BondOwnable {
         address _depositor,
         bool _flag
     ) internal returns (uint256) {
-        console.log("================ deposit ===============");
+        
         decayDebt();
-        console.log("===totalDebt, terms.maxDebt::", totalDebt, terms.maxDebt);
+        
         require(totalDebt <= terms.maxDebt, "Max capacity reached");
 
         uint256 nativePrice = trueBondPrice();
-        console.log("===maxPrice, nativePrice::", _maxPrice, nativePrice);
 
         require(_maxPrice >= nativePrice, "Slippage limit: more than max price"); // slippage protection
 
@@ -302,7 +300,6 @@ contract CustomBond is BondOwnable {
         // must be > 0.01 payout token ( underflow protection )
         require(payout >= 10**PAYOUT_TOKEN.decimals() / 100, "Bond too small");
 
-        console.log("===value, payout, maxPayout()::", value, payout, maxPayout());
         require(payout <= maxPayout(), "Bond too large"); // size protection because there is no slippage
 
         // principal is transferred in
@@ -333,7 +330,6 @@ contract CustomBond is BondOwnable {
 
         // total debt is increased
         totalDebt = totalDebt.add(value);
-        console.log("===totalDebt after deposit::", totalDebt);
 
         // depositor info is stored
         if(lpTokenAsFeeFlag){
@@ -360,7 +356,6 @@ contract CustomBond is BondOwnable {
         totalPayoutGiven = totalPayoutGiven.add(payout); // total payout increased
         payoutSinceLastSubsidy = payoutSinceLastSubsidy.add(payout); // subsidy counter increased
 
-        console.log("===totalPrincipalBonded, totalPayoutGiven, payoutSinceLastSubsidy::", totalPrincipalBonded, totalPayoutGiven, payoutSinceLastSubsidy);
         adjust(); // control variable is adjusted
         return payout;
     }
@@ -410,9 +405,6 @@ contract CustomBond is BondOwnable {
     /// @notice makes incremental adjustment to control variable
     function adjust() internal {
         uint256 blockCanAdjust = adjustment.lastBlock.add(adjustment.buffer);
-        console.log("===adjustment.rate, adjustment.target::", adjustment.rate, adjustment.target);
-        console.log("===adjustment.lastBlock, adjustment.buffer::", adjustment.lastBlock, adjustment.buffer);
-        console.log("===block.number, blockCanAdjust::", block.number, blockCanAdjust);
         if (adjustment.rate != 0 && block.number >= blockCanAdjust) {
             uint256 initial = terms.controlVariable;
             if (adjustment.add) {
@@ -427,11 +419,9 @@ contract CustomBond is BondOwnable {
                 }
             }
             adjustment.lastBlock = block.number;
-            console.log("===initial, terms.controlVariable::", initial, terms.controlVariable);
-            console.log("===adjustment.rate, adjustment.add::", adjustment.rate, adjustment.add);
+            
             emit ControlVariableAdjustment(initial, terms.controlVariable, adjustment.rate, adjustment.add);
         }
-        console.log("===terms.controlVariable after adjust::", terms.controlVariable);
     }
 
     /**

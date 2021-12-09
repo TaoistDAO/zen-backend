@@ -2,13 +2,12 @@
 
 pragma solidity 0.7.5;
 
-import "../types/Ownable.sol";
+import "../types/BondOwnable.sol";
 import "../libraries/SafeMath.sol";
 import "../libraries/SafeERC20.sol";
 import "../interfaces/IERC20.sol";
-import "hardhat/console.sol";
 
-contract CustomTreasury is Ownable {
+contract CustomTreasury is BondOwnable {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 

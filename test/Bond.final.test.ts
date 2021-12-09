@@ -1,7 +1,7 @@
 import {expect} from './chai-setup';
 import {ethers, deployments} from 'hardhat';
 import {setupUsers, config, randomAddress} from './utils';
-import {Factory, FactoryStorage, Helper, SubsidyRouter, MockToken} from '../typechain';
+import {Factory, Helper, SubsidyRouter, MockToken} from '../typechain';
 import { BigNumber, utils } from 'ethers';
 import "dotenv/config";
 import { config as dotenvConfig } from "dotenv";
@@ -14,7 +14,6 @@ const setup = deployments.createFixture(async () => {
   
   const contracts = {
     FactoryContract: <Factory>await ethers.getContract('Factory'),
-    FactoryStorageContract: <FactoryStorage>await ethers.getContract('FactoryStorage'),
     SubsidyRouterContract: <SubsidyRouter>await ethers.getContract('SubsidyRouter'),
     HelperContract: <Helper>await ethers.getContract('Helper'),
     FeesContract: <Fees>await ethers.getContract('Fees'),
@@ -49,7 +48,7 @@ describe('Whole flow with principleToken', async function () {
     events = (await feesTx.wait()).events; 
     const tierCeilings = events[0].args.tierCeilings;
     const fees = events[0].args.fees;
-    console.log("====fees, tierCeilings", Number(tierCeilings[0]), Number(fees[0]));
+    console.log("====tierCeilings, fees", Number(tierCeilings[0]), Number(fees[0]));
     expect(Number(config.fees[0])).to.equal(Number(fees[0]));
 
     const tx = await FactoryContract.connect(deployer).createBondAndTreasury(
@@ -72,7 +71,7 @@ describe('Whole flow with principleToken', async function () {
     const controlVariable = BigNumber.from(50000);// > 0
     const vestingTerm = BigNumber.from(10200);
     const minimumPrice = BigNumber.from(36760);
-    const maxPayout = BigNumber.from(40);// 0.04%
+    const maxPayout = BigNumber.from(40);// 0.04% 
     const maxDebt = utils.parseEther('1250');
     const initialDebt = utils.parseEther('400');//400000000000000000000
 

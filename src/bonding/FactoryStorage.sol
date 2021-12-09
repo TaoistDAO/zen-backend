@@ -1,68 +1,82 @@
-// SPDX-License-Identifier: GPL-3.0
+// // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity 0.7.5;
+// pragma solidity 0.7.5;
 
-import "../types/Ownable.sol";
+// import "../types/BondOwnable.sol";
 
-contract FactoryStorage is Ownable {
-    struct BondDetails {
-        address _payoutToken;
-        address _principleToken;
-        address _treasuryAddress;
-        address _bondAddress;
-        address _initialOwner;
-    }
+// contract FactoryStorage is BondOwnable {
+//     struct BondDetails {
+//         address _payoutToken;
+//         address _principleToken;
+//         address _treasuryAddress;
+//         address _bondAddress;
+//         address _initialOwner;
+//     }
 
-    BondDetails[] public bondDetails;
+//     BondDetails[] public bondDetails;
 
-    address public factory;
+//     address public factory;
 
-    mapping(address => uint256) public indexOfBond;
+//     mapping(address => uint256) public indexOfBond;
 
-    event NewBond(address treasury, address bond, address _initialOwner);
+//     event NewBond(address treasury, address bond, address _initialOwner);
     
-    /* ======== POLICY FUNCTIONS ======== */
+//     /* ======== POLICY FUNCTIONS ======== */
 
-    /**
-        @notice pushes bond details to array
-        @param _payoutToken address
-        @param _principleToken address
-        @param _customTreasury address
-        @param _customBond address
-        @param _initialOwner address
-        @return _treasury address
-        @return _bond address
-     */
-    function pushBond(
-        address _payoutToken, 
-        address _principleToken, 
-        address _customTreasury, 
-        address _customBond, 
-        address _initialOwner
-    ) external returns(address _treasury, address _bond) {
+//     /**
+//         @notice pushes bond details to array
+//         @param _payoutToken address
+//         @param _principleToken address
+//         @param _customTreasury address
+//         @param _customBond address
+//         @param _initialOwner address
+//         @return _treasury address
+//         @return _bond address
+//      */
+//     function pushBond(
+//         address _payoutToken, 
+//         address _principleToken, 
+//         address _customTreasury, 
+//         address _customBond, 
+//         address _initialOwner,
+//         address _factory
+//     ) external returns(address _treasury, address _bond) {
 
-        indexOfBond[_customBond] = bondDetails.length;
+//         require(_factory != address(0), "pushBond: caller bad address");
+//         require(isContract(_factory), "pushBond: caller is not contract");
+//         require(msg.sender == _factory, "pushBond: caller is not the factory contract");
 
-        bondDetails.push(
-            BondDetails({
-                _payoutToken: _payoutToken,
-                _principleToken: _principleToken,
-                _treasuryAddress: _customTreasury,
-                _bondAddress: _customBond,
-                _initialOwner: _initialOwner
-            })
-        );
+//         indexOfBond[_customBond] = bondDetails.length;
 
-        emit NewBond(_customTreasury, _customBond, _initialOwner);
+//         bondDetails.push(
+//             BondDetails({
+//                 _payoutToken: _payoutToken,
+//                 _principleToken: _principleToken,
+//                 _treasuryAddress: _customTreasury,
+//                 _bondAddress: _customBond,
+//                 _initialOwner: _initialOwner
+//             })
+//         );
+
+//         emit NewBond(_customTreasury, _customBond, _initialOwner);
         
-        return(_customTreasury, _customBond);
-    }
+//         return(_customTreasury, _customBond);
+//     }
 
-    /**
-        @notice changes flux pro factory address
-        @param _factory address
-     */
-    function setFactoryAddress(address _factory) external onlyPolicy {
-        factory = _factory;
-    }
-}
+//     /**
+//         @notice changes flux pro factory address
+//         @param _factory address
+//      */
+//     function setFactoryAddress(address _factory) external onlyPolicy {
+//         factory = _factory;
+//     }
+
+//     /// @notice check if provided address is for contract
+//     function isContract(address _addr) private view returns (bool){
+//         uint32 size;
+//         assembly {
+//             size := extcodesize(_addr)
+//         }
+//         return (size > 0);
+//     }
+// }

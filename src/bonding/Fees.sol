@@ -4,7 +4,6 @@ pragma solidity 0.7.5;
 pragma experimental ABIEncoderV2;
 
 import "../libraries/SafeMath.sol";
-import "hardhat/console.sol";
 
 contract Fees {    
     using SafeMath for uint256;

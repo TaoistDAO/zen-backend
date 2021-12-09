@@ -2,7 +2,7 @@
 
 pragma solidity 0.7.5;
 
-import "../types/Ownable.sol";
+import "../types/BondOwnable.sol";
 
 interface IBond {
     function paySubsidy() external returns ( uint );
@@ -10,7 +10,7 @@ interface IBond {
 
 // Immutable contract routes between Olympus Pro bonds and subsidy controllers
 // Allows for subsidies on bonds offered through bond contracts
-contract SubsidyRouter is Ownable {
+contract SubsidyRouter is BondOwnable {
 
     mapping( address => address ) public bondForController; // maps bond contract managed by subsidy controller
 

@@ -1,7 +1,7 @@
 import {expect} from './chai-setup';
 import {ethers, deployments} from 'hardhat';
 import {config, randomAddress} from './utils';
-import {Factory, FactoryStorage, SubsidyRouter, MockToken} from '../typechain';
+import {Factory, SubsidyRouter, MockToken} from '../typechain';
 import { BigNumber, utils } from 'ethers';
 import { Fees } from '../typechain/Fees';
 const ERC20 = require('./utils/ERC20.json');
@@ -12,7 +12,6 @@ const setup = deployments.createFixture(async () => {
     
     const contracts = {
         FactoryContract: <Factory>await ethers.getContract('Factory'),
-        FactoryStorageContract: <FactoryStorage>await ethers.getContract('FactoryStorage'),
         SubsidyRouterContract: <SubsidyRouter>await ethers.getContract('SubsidyRouter'),
         FeesContract: <Fees>await ethers.getContract("Fees"),
         MockTokenContract: <MockToken>await ethers.getContract('MockToken'),
