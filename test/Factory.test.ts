@@ -1,7 +1,7 @@
 import {expect} from './chai-setup';
 import {ethers, deployments, getUnnamedAccounts} from 'hardhat';
 import {setupUsers, config, randomAddress} from './utils';
-import {Factory, SubsidyRouter, MockToken } from '../typechain';
+import {Factory, FactoryStorage, SubsidyRouter, MockToken } from '../typechain';
 import { BigNumber, BigNumberish, utils } from 'ethers';
 import { Fees } from '../typechain/Fees';
 const ERC20 = require('./utils/ERC20.json');
@@ -12,6 +12,7 @@ const setup = deployments.createFixture(async () => {
   
   const contracts = {
     FactoryContract: <Factory>await ethers.getContract('Factory'),
+    FactoryStorageContract: <FactoryStorage>await ethers.getContract('FactoryStorage'),
     SubsidyRouterContract: <SubsidyRouter>await ethers.getContract('SubsidyRouter'),
     FeesContract: <Fees>await ethers.getContract('Fees'),
     MockTokenContract: <MockToken>await ethers.getContract('MockToken')
@@ -34,6 +35,7 @@ describe('Factory', function () {
     const {
       deployer, user, 
       FactoryContract, 
+      FactoryStorageContract, 
       SubsidyRouterContract
     } = await setup();
     
@@ -41,6 +43,8 @@ describe('Factory', function () {
     expect(await FactoryContract.DAO()).eql(config.dao)
     expect(await FactoryContract.TREASURY()).eql(config.treasury)
 
+    const fsc = await FactoryStorageContract.deployed();
+    expect(await FactoryContract.FACTORY_STORAGE()).eql(fsc.address)
     const src = await SubsidyRouterContract.deployed();
     expect(await FactoryContract.SUBSIDY_ROUTER()).eql(src.address)
   });

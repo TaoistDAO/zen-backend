@@ -1,7 +1,7 @@
 import {expect} from './chai-setup';
 import {ethers, deployments} from 'hardhat';
 import {setupUsers, config, randomAddress} from './utils';
-import {Factory, Helper, SubsidyRouter, MockToken} from '../typechain';
+import {Factory, FactoryStorage, Helper, SubsidyRouter, MockToken} from '../typechain';
 import { BigNumber, utils } from 'ethers';
 import "dotenv/config";
 import { config as dotenvConfig } from "dotenv";
@@ -14,6 +14,7 @@ const setup = deployments.createFixture(async () => {
   
   const contracts = {
     FactoryContract: <Factory>await ethers.getContract('Factory'),
+    FactoryStorageContract: <FactoryStorage>await ethers.getContract('FactoryStorage'),
     SubsidyRouterContract: <SubsidyRouter>await ethers.getContract('SubsidyRouter'),
     HelperContract: <Helper>await ethers.getContract('Helper'),
     FeesContract: <Fees>await ethers.getContract('Fees'),
@@ -37,6 +38,7 @@ describe('Whole flow with principleToken', async function () {
     const {
       deployer, dao, user, user2, user3,
       FactoryContract,
+      FactoryStorageContract,
       FeesContract,
       MockTokenContract
     } = await setup();
@@ -66,6 +68,17 @@ describe('Whole flow with principleToken', async function () {
     const customBondAddr = events[0].args.bond;
     const TreasuryContract = TreasuryFactory.attach(customTreasuryAddr);
     const BondContract = BondFactory.attach(customBondAddr);
+
+    // pushBond
+    const push_tx = FactoryStorageContract.connect(deployer).pushBond(
+      config.usdcAdress,
+      principleToken.address,
+      customTreasuryAddr,
+      customBondAddr,
+      deployer.address, 
+      {from: deployer.address}
+    );
+    await expect(push_tx).to.be.revertedWith('Not Factory');
 
     // initialization bond
     const controlVariable = BigNumber.from(50000);// > 0

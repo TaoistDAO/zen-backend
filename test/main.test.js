@@ -3,4 +3,4 @@
 // require('../test/CustomBond.deposit.test');
 // require('../test/CustomBond.redeem.test');
 // require('../test/Factory.test');
-require('../test/Bond.final.test');
+require('./Bond.final.test');
