@@ -20,7 +20,7 @@ contract FactoryStorage is BondOwnable {
     mapping(address => uint256) public indexOfBond;
 
     event NewBond(address treasury, address bond, address _initialOwner);
-    
+
     /* ======== POLICY FUNCTIONS ======== */
 
     /**
@@ -34,15 +34,15 @@ contract FactoryStorage is BondOwnable {
         @return _bond address
      */
     function pushBond(
-        address _payoutToken, 
-        address _principleToken, 
-        address _customTreasury, 
-        address _customBond, 
+        address _payoutToken,
+        address _principleToken,
+        address _customTreasury,
+        address _customBond,
         address _initialOwner
     ) external returns(address _treasury, address _bond) {
 
         require(msg.sender == factory, "Not Factory");
-        
+
         indexOfBond[_customBond] = bondDetails.length;
 
         bondDetails.push(
@@ -56,8 +56,14 @@ contract FactoryStorage is BondOwnable {
         );
 
         emit NewBond(_customTreasury, _customBond, _initialOwner);
-        
+
         return(_customTreasury, _customBond);
+    }
+    /**
+        @notice get bondDetails count
+     */
+    function bondDetailsCount() public view returns(uint count) {
+        return bondDetails.length;
     }
 
     /**
